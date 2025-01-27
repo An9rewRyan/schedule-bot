@@ -1,19 +1,20 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from typing import List
 
-times = [f"{hour}:00" for hour in range(11, 19)]
-
-
-def get_times_keyboard(chosen_day: str) -> InlineKeyboardMarkup:
+def get_time_keyboard(start_times: List[str], day: str) -> InlineKeyboardMarkup:
     """
-    Создаём клавиатуру с интервалом времени (11:00 - 18:00).
-    Callback_data вида TIME_Понедельник_11:00, и т.д.
+    Создаёт клавиатуру с доступным временем для выбранного дня.
+    :param start_times: Список доступного начального времени (например, ["09:00", "10:30"]).
+    :param day: Выбранный день (например, "2025-01-24").
+    :return: Клавиатура с кнопками для выбора времени.
     """
     keyboard = []
-    for t in times:
+    for time in start_times:
         keyboard.append([
             InlineKeyboardButton(
-                text=t,
-                callback_data=f"TIME_{chosen_day}_{t}"
+                text=time,  # Текст кнопки
+                callback_data=f"TIME_{day}_{time}"  # Callback, содержащий дату и время
             )
         ])
+    keyboard.append([InlineKeyboardButton(text="Назад", callback_data="BACK_TO_DAYS")])  # Кнопка "Назад"
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
