@@ -1,8 +1,8 @@
-from .user import User
-from .user_timeslot_link import UserTimeSlotLink
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import date, time
 from typing import List, Optional
+from .booking_timeslot_link import BookingTimeSlotLink  # Можно импортировать без цикла
+from .user_timeslot_link import UserTimeSlotLink  # Это тоже можно импортировать без цикла
 
 
 class TimeSlot(SQLModel, table=True):
@@ -11,7 +11,11 @@ class TimeSlot(SQLModel, table=True):
     end_time: time
     date: date
 
-    visitors: List[User] = Relationship(
+    bookings: List["Booking"] = Relationship(  # Аннотация строкой, но link_model передаём объектом
+        back_populates="time_slots", link_model=BookingTimeSlotLink
+    )
+
+    visitors: List["User"] = Relationship(
         back_populates="time_slots", link_model=UserTimeSlotLink
     )
 
