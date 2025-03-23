@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from .user_timeslot_link import UserTimeSlotLink
+from .timeslot import TimeSlot
 
 
 class User(SQLModel, table=True):
@@ -10,6 +11,8 @@ class User(SQLModel, table=True):
     second_name: Optional[str] = Field(max_length=50)
     age: Optional[int] = Field()
     phone_number: Optional[str] = Field(max_length=13)
-    time_slots: List["TimeSlot"] = Relationship(
+    is_admin: Optional[bool] = Field(default=False)
+
+    time_slots: List[TimeSlot] = Relationship(
         back_populates="visitors", link_model=UserTimeSlotLink
     )

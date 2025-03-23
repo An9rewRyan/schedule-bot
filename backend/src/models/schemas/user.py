@@ -11,3 +11,7 @@ class UserCreate(BaseModel):
 
 class UserAuth(BaseModel):
     telegram_id: int
+
+
+class UserId(BaseModel):
+    telegram_id: int
