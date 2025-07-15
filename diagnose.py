@@ -247,7 +247,7 @@ def main():
     if passed == total:
         print("🎉 Все проверки пройдены! Проект готов к работе.")
         print("\n🚀 Запустите проект:")
-        print("  python start_mini_app_local.py")
+        print("  python run_dev.py")
     else:
         print("⚠️  Есть проблемы, которые нужно исправить.")
         print("\n🔧 Рекомендации:")
@@ -270,10 +270,11 @@ def main():
         if not results[6]:  # Bot token
             print("- Настройте токен бота в tg_bot/constants.py")
     
-    print("\n📋 Дополнительные команды:")
+    print("\n📋 Команды запуска:")
+    print("  python run_dev.py         - Интерактивный запуск")
+    print("  python run_dev.py all     - Запуск всех сервисов")
+    print("  python run_dev.py local   - Локальный запуск (без ngrok)")
     print("  python check_ngrok.py     - Проверка ngrok")
-    print("  python start_mini_app_local.py  - Локальный запуск")
-    print("  python start_mini_app_https.py  - Запуск с HTTPS")
 
 if __name__ == "__main__":
     main() 

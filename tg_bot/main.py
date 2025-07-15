@@ -5,12 +5,12 @@ from middlewares.role_middleware import RoleMiddleware
 from constants import BOT_TOKEN
 from handlers import users_router, start_router, timeslots_router
 
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('SuperBot')
 
 # Добавляем детальное логирование для aiogram
 aiogram_logger = logging.getLogger('aiogram')
-# aiogram_logger.setLevel(logging.INFO)
+aiogram_logger.setLevel(logging.INFO)
 
 
 # Инициализация маршрутизатора

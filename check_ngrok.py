@@ -153,8 +153,8 @@ def main():
                 test_ngrok()
     
     print("\n📋 Следующие шаги:")
-    print("1. Если ngrok работает, запустите: python start_mini_app_https.py")
-    print("2. Если есть проблемы с ngrok, используйте: python start_mini_app_local.py")
+    print("1. Запустите проект: python run_dev.py")
+    print("2. Для локального запуска (без ngrok): python run_dev.py local")
     print("3. Для тестирования в браузере: http://localhost:3000/index.html")
 
 if __name__ == "__main__":

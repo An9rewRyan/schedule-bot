@@ -1,7 +1,7 @@
 import httpx
 import logging
 
-API_BASE_URL = "http://0.0.0.0:8000/api"
+API_BASE_URL = "https://77128ccdd773.ngrok-free.app/api"
 
 
 async def get_user(telegram_id: int):

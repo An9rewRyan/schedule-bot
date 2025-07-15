@@ -1,7 +1,7 @@
 // Конфигурация для Telegram Mini App
 const config = {
     // API URL - замените на ваш бэкенд URL
-    API_BASE_URL: 'http://localhost:8000/api',
+    API_BASE_URL: 'https://77128ccdd773.ngrok-free.app/api',
     
     // Mini App настройки
     MINI_APP: {
@@ -38,5 +38,7 @@ const config = {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = config;
 } else {
-    window.APP_CONFIG = config;
+    // Делаем конфигурацию доступной глобально
+    window.config = config;
+    window.APP_CONFIG = config; // Оставляем для обратной совместимости
 } 

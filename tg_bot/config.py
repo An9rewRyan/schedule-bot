@@ -1,1 +1,1 @@
-BASE_URL = "http://0.0.0.0:8000"
+BASE_URL = "https://77128ccdd773.ngrok-free.app"

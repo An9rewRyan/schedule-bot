@@ -19,66 +19,206 @@ if (tg.initDataUnsafe?.user) {
 }
 console.log('=== END TELEGRAM WEBAPP INITIALIZATION ===');
 
-// Добавляем отладочную информацию в интерфейс для Telegram
-function addDebugInfo() {
-    const debugDiv = document.createElement('div');
-    debugDiv.id = 'debug-info';
-    debugDiv.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 10px;
-        font-size: 12px;
-        z-index: 9999;
-        max-height: 200px;
-        overflow-y: auto;
-        display: none;
-    `;
-    document.body.appendChild(debugDiv);
-    
-    // Добавляем кнопку для показа/скрытия отладки
-    const debugBtn = document.createElement('button');
-    debugBtn.textContent = '🐛 Debug';
-    debugBtn.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 10000;
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 3px;
-        font-size: 12px;
-    `;
-    debugBtn.onclick = () => {
-        debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
-    };
-    document.body.appendChild(debugBtn);
-    
-    return debugDiv;
+// Улучшенное логирование с debug окном
+class DebugLogger {
+    constructor() {
+        this.logs = [];
+        this.maxLogs = 100;
+        this.debugDiv = null;
+        this.debugBtn = null;
+        this.isVisible = false;
+        this.init();
+    }
+
+    init() {
+        this.createDebugUI();
+        this.log('🚀 Debug Logger инициализирован');
+    }
+
+    createDebugUI() {
+        // Debug окно
+        this.debugDiv = document.createElement('div');
+        this.debugDiv.id = 'debug-console';
+        this.debugDiv.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            color: #00ff00;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            z-index: 10000;
+            overflow-y: auto;
+            display: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        `;
+        document.body.appendChild(this.debugDiv);
+
+        // Debug кнопка
+        this.debugBtn = document.createElement('button');
+        this.debugBtn.textContent = '🐛';
+        this.debugBtn.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10001;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
+        this.debugBtn.onclick = () => this.toggle();
+        document.body.appendChild(this.debugBtn);
+
+        // Кнопка очистки логов
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = '🗑️ Очистить';
+        clearBtn.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            z-index: 10001;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        `;
+        clearBtn.onclick = () => this.clear();
+        clearBtn.id = 'clear-debug-btn';
+        document.body.appendChild(clearBtn);
+    }
+
+    log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = {
+            timestamp,
+            message,
+            type
+        };
+        
+        this.logs.push(logEntry);
+        if (this.logs.length > this.maxLogs) {
+            this.logs.shift();
+        }
+
+        const color = this.getColor(type);
+        console.log(`%c[${timestamp}] ${message}`, `color: ${color}`);
+        
+        this.updateDebugDisplay();
+    }
+
+    getColor(type) {
+        const colors = {
+            'info': '#00ff00',
+            'error': '#ff0000',
+            'warning': '#ffff00',
+            'api': '#00bfff',
+            'response': '#ffa500',
+            'success': '#00ff00'
+        };
+        return colors[type] || '#ffffff';
+    }
+
+    updateDebugDisplay() {
+        if (!this.debugDiv) return;
+        
+        const content = this.logs.map(log => {
+            const color = this.getColor(log.type);
+            return `<span style="color: ${color}">[${log.timestamp}] ${log.message}</span>`;
+        }).join('\n');
+        
+        this.debugDiv.innerHTML = content;
+        this.debugDiv.scrollTop = this.debugDiv.scrollHeight;
+    }
+
+    toggle() {
+        this.isVisible = !this.isVisible;
+        this.debugDiv.style.display = this.isVisible ? 'block' : 'none';
+        document.getElementById('clear-debug-btn').style.display = this.isVisible ? 'block' : 'none';
+        this.debugBtn.textContent = this.isVisible ? '❌' : '🐛';
+    }
+
+    clear() {
+        this.logs = [];
+        this.updateDebugDisplay();
+        this.log('🗑️ Логи очищены');
+    }
+
+    // Специальные методы для разных типов сообщений
+    apiRequest(url, method, headers, body) {
+        this.log(`🌐 ${method} ${url}`, 'api');
+        this.log(`📤 Headers: ${JSON.stringify(headers, null, 2)}`, 'api');
+        if (body) {
+            this.log(`📤 Body: ${JSON.stringify(body, null, 2)}`, 'api');
+        }
+    }
+
+    apiResponse(url, status, headers, body) {
+        const type = status >= 200 && status < 300 ? 'success' : 'error';
+        this.log(`📥 Response ${status} from ${url}`, type);
+        if (headers) {
+            this.log(`📥 Response Headers: ${JSON.stringify(headers, null, 2)}`, 'response');
+        }
+        if (body) {
+            this.log(`📥 Response Body: ${JSON.stringify(body, null, 2)}`, 'response');
+        }
+    }
+
+    error(message) {
+        this.log(`❌ ${message}`, 'error');
+    }
+
+    warning(message) {
+        this.log(`⚠️ ${message}`, 'warning');
+    }
+
+    success(message) {
+        this.log(`✅ ${message}`, 'success');
+    }
 }
 
-// Функция для добавления отладочной информации
-function debugLog(message) {
-    console.log(message);
-    const debugDiv = document.getElementById('debug-info');
-    if (debugDiv) {
-        debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
-        debugDiv.scrollTop = debugDiv.scrollHeight;
+// Создаем глобальный экземпляр логгера
+const debugLogger = new DebugLogger();
+
+// Добавляем отладочную информацию в интерфейс для Telegram
+function addDebugInfo() {
+    debugLogger.log('=== TELEGRAM WEBAPP INFO ===');
+    debugLogger.log(`Version: ${tg.version}`);
+    debugLogger.log(`Platform: ${tg.platform}`);
+    debugLogger.log(`User available: ${!!tg.initDataUnsafe?.user}`);
+    
+    if (tg.initDataUnsafe?.user) {
+        debugLogger.log(`User ID: ${tg.initDataUnsafe.user.id} (${typeof tg.initDataUnsafe.user.id})`);
+        debugLogger.log(`User name: ${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name || ''}`);
     }
+    debugLogger.log('=== END TELEGRAM WEBAPP INFO ===');
+}
+
+// Функция для добавления отладочной информации (обратная совместимость)
+function debugLog(message) {
+    debugLogger.log(message);
 }
 
 // Перехватываем ошибки
 window.addEventListener('error', (e) => {
-    debugLog(`ERROR: ${e.message} at ${e.filename}:${e.lineno}`);
+    debugLogger.error(`${e.message} at ${e.filename}:${e.lineno}`);
 });
 
 window.addEventListener('unhandledrejection', (e) => {
-    debugLog(`UNHANDLED PROMISE REJECTION: ${e.reason}`);
+    debugLogger.error(`UNHANDLED PROMISE REJECTION: ${e.reason}`);
 });
 
 // Инициализируем отладку
@@ -105,7 +245,7 @@ let selectedTime = null;
 let availableDays = [];
 let availableTimes = [];
 
-// Вспомогательная функция для API запросов с правильными заголовками
+// Вспомогательная функция для API запросов с детальным логированием
 async function apiRequest(url, options = {}) {
     const defaultOptions = {
         method: 'GET',
@@ -128,29 +268,79 @@ async function apiRequest(url, options = {}) {
         }
     };
     
-    debugLog(`API Request: ${options.method || 'GET'} ${url}`);
-    debugLog(`Headers: ${JSON.stringify(mergedOptions.headers)}`);
+    // Логируем запрос
+    const method = options.method || 'GET';
+    debugLogger.apiRequest(url, method, mergedOptions.headers, options.body);
     
-    const response = await fetch(url, mergedOptions);
-    
-    debugLog(`Response status: ${response.status}`);
-    debugLog(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
-    
-    return response;
+    try {
+        const response = await fetch(url, mergedOptions);
+        
+        // Получаем заголовки ответа
+        const responseHeaders = Object.fromEntries(response.headers.entries());
+        
+        // Клонируем response для чтения body без потери данных
+        const responseClone = response.clone();
+        let responseBody = null;
+        
+        // Пытаемся прочитать body как JSON
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                responseBody = await responseClone.json();
+            } else {
+                responseBody = await responseClone.text();
+            }
+        } catch (e) {
+            debugLogger.warning(`Не удалось прочитать response body: ${e.message}`);
+        }
+        
+        // Логируем ответ
+        debugLogger.apiResponse(url, response.status, responseHeaders, responseBody);
+        
+        return response;
+        
+    } catch (error) {
+        debugLogger.error(`Ошибка API запроса к ${url}: ${error.message}`);
+        debugLogger.error(`Stack trace: ${error.stack}`);
+        throw error;
+    }
 }
 
 // API configuration
-// Определяем базовый URL в зависимости от среды
+// Определяем базовый URL из конфигурации
 const API_BASE_URL = (() => {
-    // Если запущено в Telegram WebApp, используем ngrok URL для бэкенда
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-        console.log('Detected Telegram WebApp environment');
-        return 'https://883a49bbac6d.ngrok-free.app/api';
+    debugLogger.log('Определяем API_BASE_URL...');
+    
+    // Если есть глобальная конфигурация, используем её (приоритет!)
+    if (window.config && window.config.API_BASE_URL) {
+        debugLogger.log(`✅ Используем API_BASE_URL из config.js: ${window.config.API_BASE_URL}`);
+        return window.config.API_BASE_URL;
     }
-    // Иначе используем localhost для разработки
-    console.log('Detected local development environment');
+    
+    // Если config не загружен, но запущено в Telegram WebApp - НЕ используем localhost!
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        debugLogger.warning('⚠️ Config.js не загружен! В Telegram WebApp НЕ ДОЛЖНО быть localhost!');
+        debugLogger.warning('⚠️ Fallback: будем пытаться использовать localhost, но это может не работать');
+        return 'http://localhost:8000/api';
+    }
+    
+    // Локальная разработка - используем localhost
+    debugLogger.log('🏠 Локальная среда разработки - используем localhost');
     return 'http://localhost:8000/api';
 })();
+
+// Диагностика конфигурации
+debugLogger.log('=== ДИАГНОСТИКА КОНФИГУРАЦИИ ===');
+debugLogger.log(`window.config доступен: ${!!window.config}`);
+if (window.config) {
+    debugLogger.log(`config.API_BASE_URL: ${window.config.API_BASE_URL}`);
+} else {
+    debugLogger.error('❌ window.config НЕ НАЙДЕН! Config.js не загружен или ошибка');
+}
+debugLogger.log(`Telegram WebApp доступен: ${!!window.Telegram?.WebApp}`);
+debugLogger.log(`initData доступен: ${!!window.Telegram?.WebApp?.initData}`);
+debugLogger.log(`ИТОГОВЫЙ API_BASE_URL: ${API_BASE_URL}`);
+debugLogger.log('=== КОНЕЦ ДИАГНОСТИКИ ===');
 
 console.log('API_BASE_URL:', API_BASE_URL);
 
