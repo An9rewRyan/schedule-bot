@@ -22,14 +22,16 @@ class MiniAppStopper:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
                 # Проверяем имя процесса и командную строку
-                cmdline = ' '.join(proc.info['cmdline']) if proc.info['cmdline'] else ''
+                proc_name = proc.info['name'] or ''
+                cmdline_list = proc.info['cmdline'] or []
+                cmdline = ' '.join(cmdline_list) if cmdline_list else ''
                 
                 for name in process_names:
-                    if (name in proc.info['name'] or 
+                    if (name in proc_name or 
                         name in cmdline or
-                        any(name in arg for arg in proc.info['cmdline'] if arg)):
+                        any(name in arg for arg in cmdline_list if arg)):
                         
-                        print(f"🛑 Останавливаем {proc.info['name']} (PID: {proc.info['pid']})")
+                        print(f"🛑 Останавливаем {proc_name} (PID: {proc.info['pid']})")
                         proc.terminate()
                         killed += 1
                         
@@ -80,7 +82,8 @@ class MiniAppStopper:
         # Дополнительно ищем по содержимому - aiogram
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
-                cmdline = ' '.join(proc.info['cmdline']) if proc.info['cmdline'] else ''
+                cmdline_list = proc.info['cmdline'] or []
+                cmdline = ' '.join(cmdline_list) if cmdline_list else ''
                 if 'aiogram' in cmdline or 'telegram' in cmdline.lower():
                     print(f"🛑 Останавливаем Telegram Bot (PID: {proc.info['pid']})")
                     proc.terminate()
