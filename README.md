@@ -201,4 +201,4 @@ python start_mini_app_local.py
 
 ## 📄 Лицензия
 
-MIT License
+CC BY-NC-SA 4.0:
