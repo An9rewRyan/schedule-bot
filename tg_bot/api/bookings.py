@@ -1,7 +1,8 @@
 import httpx
 from typing import List, Dict, Any
 from datetime import date, datetime, timedelta, time
-from w3lib.url import add_or_replace_parameter
+# Убираем зависимость от w3lib, используем urllib.parse
+from urllib.parse import urlencode, parse_qs, urlparse, urlunparse
 
 API_BASE_URL = "http://0.0.0.0:8000/api"
 
@@ -9,10 +10,7 @@ API_BASE_URL = "http://0.0.0.0:8000/api"
 async def delete_booking(booking_id: int, telegram_id: int):
     url_deleted = False
     async with httpx.AsyncClient() as client:
-        url = f"{API_BASE_URL}/bookings"
-        payload = {"telegram_id": telegram_id}
-        url = add_or_replace_parameter(url, "booking_id", str(booking_id))
-        url = add_or_replace_parameter(url, 'telegram_id', telegram_id)
+        url = f"{API_BASE_URL}/bookings/{booking_id}?telegram_id={telegram_id}"
         response = await client.delete(url=url)
         if response.status_code == 200:
             url_deleted = True
@@ -34,15 +32,15 @@ async def get_bookings_for_day(selected_date: date) -> List[Dict[str, Any]]:
 
 async def get_bookings_for_user(telegram_id: int) -> List[Dict[str, Any]]:
     """
-    Получает все записи на конкретный день (для администратора).
+    Получает все записи для конкретного пользователя.
     """
     async with httpx.AsyncClient() as client:
-        params = {'telegram_id': telegram_id}
-        response = await client.get(f"{API_BASE_URL}/bookings", params=params)
+        # Используем новый эндпоинт с telegram_id в пути
+        response = await client.get(f"{API_BASE_URL}/bookings/user/{telegram_id}")
         if response.status_code == 200:
             data = response.json()
             return data  # Возвращаем список всех записей
-        raise Exception(f"Ошибка получения записей на день: {response.text}")
+        raise Exception(f"Ошибка получения записей пользователя: {response.text}")
 
 
 async def book_slots(start_time: str, end_time: str, selected_day: str, user_id: int) -> Dict[str, Any]:

@@ -10,6 +10,7 @@ class TimeSlot(SQLModel, table=True):
     start_time: time
     end_time: time
     date: date
+    weekday: str = Field(max_length=20)  # Добавляем поле weekday
 
     bookings: List["Booking"] = Relationship(  # Аннотация строкой, но link_model передаём объектом
         back_populates="time_slots", link_model=BookingTimeSlotLink

@@ -1,12 +1,12 @@
-from tg_bot.keyboards.start_keyboard import get_start_keyboard
-from tg_bot.keyboards.register_keyboard import get_cancel_keyboard, get_confirmation_keyboard
-from tg_bot.api.users import register_user
+from keyboards.start_keyboard import get_start_keyboard
+from keyboards.register_keyboard import get_cancel_keyboard, get_confirmation_keyboard
+from api.users import register_user
 from aiogram.filters.state import StateFilter
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state
-from tg_bot.states import RegisterStates
+from states import RegisterStates
 
 router = Router()
 

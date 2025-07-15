@@ -41,7 +41,22 @@ async def register_user(user_data: UserCreate,
     return {"message": "User successfully registered", "user": new_user}
 
 
-@users_router.patch("/users/{telegram_id}/admin", response_model=User)
+@users_router.get("/{telegram_id}")
+async def get_user_by_telegram_id(
+        telegram_id: int,
+        user_repo: UserCRUDRepository = Depends(get_repository(repo_type=UserCRUDRepository))
+):
+    """Получает пользователя по telegram_id"""
+    user = await user_repo.get_user_by_telegram_id(telegram_id=telegram_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден",
+        )
+    return user
+
+
+@users_router.patch("/{telegram_id}/admin", response_model=User)
 async def add_admin_role(
         telegram_id: int,
         user_repo: UserCRUDRepository = Depends(get_repository(repo_type=UserCRUDRepository))

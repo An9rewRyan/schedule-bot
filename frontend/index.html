@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись на тренировки</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading" class="loading-screen">
+            <div class="spinner"></div>
+            <p>Загрузка...</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="main-content" style="display: none;">
+            <!-- Header -->
+            <header class="header">
+                <h1>🎯 Запись на тренировки</h1>
+                <div id="user-info" class="user-info">
+                    <span id="user-name"></span>
+                </div>
+            </header>
+
+            <!-- Navigation -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="booking">Записаться</button>
+                <button class="nav-tab" data-tab="my-bookings">Мои записи</button>
+                <button class="nav-tab admin-only" data-tab="admin" style="display: none;">Админ панель</button>
+            </nav>
+
+            <!-- Booking Section -->
+            <div id="booking" class="tab-content active">
+                <div class="section">
+                    <h2>Выберите день</h2>
+                    <div id="days-grid" class="days-grid"></div>
+                </div>
+
+                <div id="times-section" class="section" style="display: none;">
+                    <h2>Выберите время</h2>
+                    <div id="times-grid" class="times-grid"></div>
+                </div>
+
+                <div id="confirmation-section" class="section" style="display: none;">
+                    <h2>Подтверждение</h2>
+                    <div id="booking-details" class="booking-details"></div>
+                    <div class="button-group">
+                        <button id="confirm-booking" class="btn btn-primary">Подтвердить</button>
+                        <button id="cancel-booking" class="btn btn-secondary">Отменить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Bookings Section -->
+            <div id="my-bookings" class="tab-content">
+                <div class="section">
+                    <h2>Мои записи</h2>
+                    <div id="bookings-list" class="bookings-list"></div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div id="admin" class="tab-content">
+                <div class="section">
+                    <h2>Панель администратора</h2>
+                    <div id="admin-content" class="admin-content">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h3>Всего записей</h3>
+                                <span id="total-bookings">0</span>
+                            </div>
+                            <div class="stat-card">
+                                <h3>Сегодня</h3>
+                                <span id="today-bookings">0</span>
+                            </div>
+                        </div>
+                        <div id="all-bookings" class="all-bookings"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="error-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Ошибка</h3>
+                <p id="error-message"></p>
+                <button class="btn btn-primary" onclick="closeErrorModal()">OK</button>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Успешно!</h3>
+                <p id="success-message"></p>
+                <button class="btn btn-primary" onclick="closeSuccessModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 

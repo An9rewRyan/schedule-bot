@@ -10,7 +10,7 @@ async def get_user(telegram_id: int):
     is_authenticated = False
     async with httpx.AsyncClient() as client:
         payload = {'telegram_id': telegram_id}
-        response = await client.request(url=f"{API_BASE_URL}/authenticate", method='POST', json=payload)
+        response = await client.request(url=f"{API_BASE_URL}/users/authenticate", method='POST', json=payload)
         if response.status_code == 200:
             jo = response.json()
             is_authenticated = True
@@ -21,7 +21,7 @@ async def get_user(telegram_id: int):
 
 async def register_user(user_data: dict):
     async with httpx.AsyncClient() as client:
-        response = await client.request(url=f"{API_BASE_URL}/register", method='POST', json=user_data)
+        response = await client.request(url=f"{API_BASE_URL}/users/register", method='POST', json=user_data)
     return response
 
 

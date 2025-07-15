@@ -1,11 +1,11 @@
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from tg_bot.keyboards.days_keyboard import get_days_keyboard
-from tg_bot.keyboards.time_keyboard import get_time_keyboard
-from tg_bot.keyboards.user_bookings_keyboard import get_user_bookings_keyboard
-from tg_bot.api.timeslots import get_free_days, get_available_slots
-from tg_bot.api.bookings import book_slots, get_bookings_for_user
-from tg_bot.api.bookings import delete_booking
-from tg_bot.helpers import *
+from keyboards.days_keyboard import get_days_keyboard
+from keyboards.time_keyboard import get_time_keyboard
+from keyboards.user_bookings_keyboard import get_user_bookings_keyboard
+from api.timeslots import get_free_days, get_available_slots
+from api.bookings import book_slots, get_bookings_for_user
+from api.bookings import delete_booking
+from helpers import *
 from aiogram import Router, F
 from datetime import datetime, timedelta, time
 

@@ -25,40 +25,61 @@ class BookingService:
         user = await self.user_repo.get_user_by_telegram_id(telegram_id)
         if not user:
             raise UserNotFoundException
-        timeslot_service = TimeslotService(timeslot_repo=self.timeslot_repo, user_repo=self.user_repo)
-        booking_date = datetime.strptime(booking_date, "%Y-%m-%d")
-        start_time = datetime.strptime(start_time, "%H:%M:%S").time()
-        end_time = datetime.strptime(end_time, "%H:%M:%S").time()
-        slots = await timeslot_service.get_free_slots(selected_date=booking_date, telegram_id=telegram_id,
-                                                      start_time=start_time)
-        start_minutes = start_time.hour * 60 + start_time.minute
-        end_minutes = end_time.hour * 60 + end_time.minute
-        requested_slots_amount = (end_minutes - start_minutes) // 30
-
-        if requested_slots_amount < 3:
-            raise BookingRequestException(
-                "Booking duration is too short; at least 1.5 hours required."
-            )
-        if len(slots) < requested_slots_amount:
-            raise BookingRequestException("Not enough available time slots for the chosen period.")
+        
+        # Преобразуем строки в нужные типы
+        booking_date_obj = datetime.strptime(booking_date, "%Y-%m-%d").date()
+        start_time_obj = datetime.strptime(start_time, "%H:%M:%S").time()
+        end_time_obj = datetime.strptime(end_time, "%H:%M:%S").time()
+        
+        # Получаем все доступные слоты для данной даты (без фильтрации по времени)
+        all_slots = await self.timeslot_repo.get_timeslots_by_date(selected_date=booking_date_obj)
+        
+        # Фильтруем слоты, доступные для пользователя
+        available_slots = []
+        for slot in all_slots:
+            if user not in slot.visitors and len(slot.visitors) < 4:
+                available_slots.append(slot)
+        
+        # Сортируем по времени начала
+        available_slots.sort(key=lambda x: x.start_time)
+        
+        # Находим последовательность слотов, начинающуюся с нужного времени
         booking_slots = []
-        for slot in slots:
-            if not booking_slots:
+        start_found = False
+        
+        for slot in available_slots:
+            if slot.start_time == start_time_obj:
+                start_found = True
                 booking_slots.append(slot)
-            else:
+            elif start_found and booking_slots:
+                # Проверяем, что слот идет сразу после предыдущего
                 last_slot = booking_slots[-1]
                 if last_slot.end_time == slot.start_time:
                     booking_slots.append(slot)
-            if len(booking_slots) == requested_slots_amount:
-                break
-
-        if len(booking_slots) < requested_slots_amount:
+                    
+                    # Проверяем, достигли ли мы нужного времени окончания
+                    if slot.end_time >= end_time_obj:
+                        break
+                else:
+                    # Пробел в слотах - останавливаемся
+                    break
+        
+        if not start_found:
+            raise BookingRequestException(f"No available slot found starting at {start_time}")
+        
+        # Проверяем, что у нас есть достаточно времени
+        if not booking_slots:
+            raise BookingRequestException("No consecutive slots available for the requested time")
+        
+        # Проверяем, что последний слот покрывает нужное время окончания
+        last_slot = booking_slots[-1]
+        if last_slot.end_time < end_time_obj:
             raise BookingRequestException("Requested consecutive slots are not available.")
         booking = Booking(
             user_id=user.id,
-            start_time=start_time,
-            end_time=end_time,
-            date=booking_date,
+            start_time=start_time_obj,
+            end_time=end_time_obj,
+            date=booking_date_obj,
         )
         await self.booking_repo.add_booking(booking)
         booking_links = [

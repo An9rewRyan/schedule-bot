@@ -1,6 +1,7 @@
 from src.repository.crud.timeslot import TimeslotCRUDRepository
 from src.repository.crud.user import UserCRUDRepository
-from datetime import date, time
+from datetime import date, time, timedelta
+from typing import Optional, List
 from src.utilities.exceptions import UserNotFoundException
 
 
@@ -9,27 +10,62 @@ class TimeslotService:
         self.user_repo = user_repo
         self.timeslot_repo = timeslot_repo
 
-    async def get_free_slots(self, telegram_id: int = None, selected_date: date = date.today(),
+    async def get_free_slots(self, telegram_id: Optional[int] = None, selected_date: date = date.today(),
                              start_time: time = None):
         user = await self.user_repo.get_user_by_telegram_id(telegram_id=telegram_id)
         if not user:
             raise UserNotFoundException
+        
+        # Получаем все слоты на выбранную дату
         slots = await self.timeslot_repo.get_timeslots_by_date(selected_date=selected_date, start_time=start_time)
-        user_not_taken_slots = []
-        good_start_times = []
-        slots_strike = []
+        
+        # Фильтруем слоты, доступные для пользователя
+        available_slots = []
         for slot in slots:
             if user not in slot.visitors and len(slot.visitors) < 4:
-                user_not_taken_slots.append(slot)
-        for i in range(len(user_not_taken_slots) - 1):
-            if len(slots_strike) == 3:
-                good_start_times.append(slots_strike.pop(0))
-            if user_not_taken_slots[i].end_time == user_not_taken_slots[i + 1].start_time:
-                slots_strike.append(user_not_taken_slots[i])
-            else:
-                if user_not_taken_slots[i].start_time == user_not_taken_slots[i - 1].end_time and len(
-                        slots_strike) == 2:
-                    user_not_taken_slots.append(slots_strike.pop(0))
-                slots_strike = []
+                available_slots.append(slot)
+        
+        # Сортируем по времени начала
+        available_slots.sort(key=lambda x: x.start_time)
+        
+        # Фильтруем только те слоты, которые подходят для 90-минутных тренировок
+        training_slots = []
+        
+        for i in range(len(available_slots) - 1):
+            current_slot = available_slots[i]
+            next_slot = available_slots[i + 1]
+            
+            # Проверяем, что текущий слот и следующий идут подряд
+            if current_slot.end_time == next_slot.start_time:
+                # Рассчитываем общую длительность двух слотов
+                from datetime import datetime, timedelta
+                start_time_obj = datetime.combine(selected_date, current_slot.start_time)
+                end_time_obj = datetime.combine(selected_date, next_slot.end_time)
+                duration_minutes = (end_time_obj - start_time_obj).total_seconds() / 60
+                
+                # Если есть минимум 90 минут, добавляем слот
+                if duration_minutes >= 90:
+                    training_slots.append(current_slot)
+        
+        return training_slots
 
-        return user_not_taken_slots
+    async def get_available_days(self, telegram_id: Optional[int] = None, days_ahead: int = 7) -> List[date]:
+        """Получает список доступных дней для записи"""
+        user = await self.user_repo.get_user_by_telegram_id(telegram_id=telegram_id)
+        if not user:
+            raise UserNotFoundException
+        
+        # Получаем таймслоты на ближайшие дни
+        today = date.today()
+        end_date = today + timedelta(days=days_ahead)
+        
+        # Получаем все таймслоты в диапазоне дат
+        all_slots = await self.timeslot_repo.get_timeslots_by_date_range(start_date=today, end_date=end_date)
+        
+        # Группируем по датам и находим дни с доступными таймслотами
+        available_days = set()
+        for slot in all_slots:
+            if user not in slot.visitors and len(slot.visitors) < 4:
+                available_days.add(slot.date)
+        
+        return sorted(list(available_days))
