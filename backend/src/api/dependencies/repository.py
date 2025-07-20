@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession as SQLAlchemyAsyncSession,
 )
 
-from src.api.dependencies.session import get_async_session
-from src.repository.crud import BaseCRUDRepository
+from backend.src.api.dependencies.session import get_async_session
+from backend.src.repository.crud import BaseCRUDRepository
 
 
 def get_repository(

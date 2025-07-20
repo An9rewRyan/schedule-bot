@@ -1,9 +1,9 @@
 from sqlalchemy.future import select
 from sqlmodel import select
-from src.models.db import Booking, UserTimeSlotLink
-from src.models.db.booking_timeslot_link import BookingTimeSlotLink
-from src.repository.crud import BookingCRUDRepository, UserCRUDRepository, TimeslotCRUDRepository
-from src.utilities.exceptions import (
+from backend.src.models.db import Booking, UserTimeSlotLink
+from backend.src.models.db.booking_timeslot_link import BookingTimeSlotLink
+from backend.src.repository.crud import BookingCRUDRepository, UserCRUDRepository, TimeslotCRUDRepository
+from backend.src.utilities.exceptions import (
     BookingNotFoundException,
     BookingRequestException,
     UserNotFoundException

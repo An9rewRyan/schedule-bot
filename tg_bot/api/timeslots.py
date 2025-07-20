@@ -2,7 +2,7 @@ import httpx
 from typing import List, Dict, Any, Optional
 from datetime import date, datetime, timedelta
 
-API_BASE_URL = "https://77128ccdd773.ngrok-free.app/api"  # Замените на ваш реальный URL API
+API_BASE_URL = "https://ea6e943e8979.ngrok-free.app/api"  # Замените на ваш реальный URL API
 
 
 async def get_free_days(current_date: date = date.today(), telegram_id: Optional[int] = None) -> List[str]:

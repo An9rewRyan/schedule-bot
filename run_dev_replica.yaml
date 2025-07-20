@@ -1,0 +1,70 @@
+global_env:
+  PYTHONPATH: .
+  ENVIRONMENT: development
+
+# Порядок запуска (важно: ngrok первым для получения URLs)
+startup_order: [ngrok, backend, frontend, telegram_bot]
+
+hooks:
+  # Хуки выполняются простыми командами
+  pre_start:
+    - echo "🚀 Запуск Mini App Development Server"
+    - echo "📋 Подготовка к запуску сервисов..."
+
+  post_start:
+    - echo "✅ Все сервисы запущены!"
+    - echo "📝 Логи отображаются ниже. Нажмите Ctrl+C для остановки."
+
+  # Хук для обновления конфигураций после запуска ngrok
+  after_ngrok_start:
+    - sleep 3  # Даем время ngrok полностью запуститься
+    - python scripts/update_ngrok_configs.py  # Отдельный скрипт для обновления
+
+services:
+  # ngrok запускается первым
+  ngrok:
+    command: ngrok start --config ngrok.yml --all --log stdout
+    working_dir: .
+    color: cyan
+    startup_delay: 0
+    enabled: true
+    restart_on_failure: false
+    post_start_hook: after_ngrok_start  # После запуска ngrok обновляем конфигурации
+    health_check:
+      type: http
+      url: http://localhost:4040/api/tunnels
+      timeout: 3
+
+  # Backend запускается после ngrok и обновления CORS
+  backend:
+    command: python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    working_dir: backend
+    color: green
+    startup_delay: 5  # Даем время ngrok запуститься и обновить конфигурации
+    depends_on: [ngrok]  # Зависит от ngrok для обновления CORS
+    enabled: true
+    restart_on_failure: true
+    max_restarts: 3
+    env:
+      PORT: "8000"
+
+  # Frontend запускается после backend
+  frontend:
+    command: python server.py
+    working_dir: frontend
+    color: blue
+    startup_delay: 1
+    depends_on: [backend]
+    enabled: true
+    restart_on_failure: false
+
+  # Telegram bot запускается последним
+  telegram_bot:
+    command: python main.py
+    working_dir: tg_bot
+    color: magenta
+    startup_delay: 2
+    depends_on: [backend]
+    enabled: true
+    restart_on_failure: true
+    max_restarts: 5
