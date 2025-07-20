@@ -1,8 +1,10 @@
-from src.repository.crud.timeslot import TimeslotCRUDRepository
-from src.repository.crud.user import UserCRUDRepository
+import logging
+
+from backend.src.repository.crud.timeslot import TimeslotCRUDRepository
+from backend.src.repository.crud.user import UserCRUDRepository
 from datetime import date, time, timedelta
 from typing import Optional, List
-from src.utilities.exceptions import UserNotFoundException
+from backend.src.utilities.exceptions import UserNotFoundException
 
 
 class TimeslotService:
@@ -18,13 +20,11 @@ class TimeslotService:
         
         # Получаем все слоты на выбранную дату
         slots = await self.timeslot_repo.get_timeslots_by_date(selected_date=selected_date, start_time=start_time)
-        
         # Фильтруем слоты, доступные для пользователя
         available_slots = []
         for slot in slots:
             if user not in slot.visitors and len(slot.visitors) < 4:
                 available_slots.append(slot)
-        
         # Сортируем по времени начала
         available_slots.sort(key=lambda x: x.start_time)
         
@@ -44,9 +44,8 @@ class TimeslotService:
                 duration_minutes = (end_time_obj - start_time_obj).total_seconds() / 60
                 
                 # Если есть минимум 90 минут, добавляем слот
-                if duration_minutes >= 90:
+                if duration_minutes >= 60:
                     training_slots.append(current_slot)
-        
         return training_slots
 
     async def get_available_days(self, telegram_id: Optional[int] = None, days_ahead: int = 7) -> List[date]:

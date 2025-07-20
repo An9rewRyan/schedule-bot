@@ -1,10 +1,10 @@
-from backend.src.repository.db import engine
+from backend.repository.db import engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import asyncio
-from backend.src.models.db import TimeSlot
+from src.models.db import TimeSlot
 
 from datetime import datetime, timedelta, time
 from sqlmodel import select
@@ -23,26 +23,18 @@ async def fill_schedule(start_date: datetime, duration: int = 30):
     slots = []
     current_date = start_date.date()
 
-    for day in range(7):  # 7 дней в неделю
+    for _ in range(7):  # 7 дней в неделю
         for hour in range(8, 18):  # Рабочие часы с 8:00 до 18:00
             for minute in (0, 30):  # Два слота по 30 минут в каждом часе
                 # Стартовое время слота
                 slot_start = time(hour=hour, minute=minute, second=0)
                 slot_end = (datetime.combine(current_date, slot_start) + timedelta(minutes=duration)).time()
-                WEEKDAYS_EN = {
-                    0: "Monday",
-                    1: "Tuesday",
-                    2: "Wednesday",
-                    3: "Thursday",
-                    4: "Friday",
-                    5: "Saturday",
-                    6: "Sunday",
-                }
+
                 # Проверяем, существует ли уже такой слот в базе
                 statement = select(TimeSlot).where(
                     TimeSlot.date == current_date,
                     TimeSlot.start_time == slot_start,
-                    TimeSlot.end_time == slot_end,
+                    TimeSlot.end_time == slot_end
                 )
                 existing_slot = await session.execute(statement)
 
@@ -51,8 +43,6 @@ async def fill_schedule(start_date: datetime, duration: int = 30):
                         date=current_date,
                         start_time=slot_start,
                         end_time=slot_end,
-                        weekday = WEEKDAYS_EN[day]
-
                     ))
 
         # Переход на следующий день

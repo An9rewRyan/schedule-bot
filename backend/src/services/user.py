@@ -1,7 +1,7 @@
-from src.repository.crud.timeslot import TimeslotCRUDRepository
-from src.repository.crud.user import UserCRUDRepository
+from backend.src.repository.crud.timeslot import TimeslotCRUDRepository
+from backend.src.repository.crud.user import UserCRUDRepository
 from datetime import date
-from src.utilities.exceptions import UserNotFoundException, UserAlreadyAdminException
+from backend.src.utilities.exceptions import UserNotFoundException, UserAlreadyAdminException
 
 
 class UserService:

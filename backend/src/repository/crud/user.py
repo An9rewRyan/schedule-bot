@@ -1,9 +1,9 @@
 from sqlalchemy.future import select
-from src.models.db import User
+from backend.src.models.db import User
 from sqlmodel import select
 from .base import BaseCRUDRepository
-from src.utilities.exceptions import UserNotFoundException
-from src.models.db import User
+from backend.src.utilities.exceptions import UserNotFoundException
+from backend.src.models.db import User
 
 
 class UserCRUDRepository(BaseCRUDRepository):

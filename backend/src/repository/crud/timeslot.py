@@ -1,5 +1,5 @@
 from sqlalchemy.future import select
-from src.models.db import TimeSlot
+from backend.src.models.db import TimeSlot
 from datetime import date, time
 from sqlalchemy.orm import selectinload
 from sqlmodel import select

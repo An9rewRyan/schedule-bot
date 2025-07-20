@@ -5,10 +5,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_repository
-from src.repository.crud import TimeslotCRUDRepository, UserCRUDRepository
-from src.models.schemas import TimeSlotInfoVisitors
-from src.models.db import TimeSlot
+from backend.src.api.dependencies import get_repository
+from backend.src.repository.crud import TimeslotCRUDRepository, UserCRUDRepository
+from backend.src.models.schemas import TimeSlotInfoVisitors
+from backend.src.models.db import TimeSlot
 
 timeslots_router = APIRouter()
 
@@ -106,7 +106,7 @@ async def get_timeslots(
         
         # Получаем тайм-слоты
         logger.info("Получение тайм-слотов из репозитория...")
-        from src.services import TimeslotService
+        from backend.src.services import TimeslotService
         
         timeslot_service = TimeslotService(user_repo=user_repo, timeslot_repo=timeslot_repo)
         free_slots = await timeslot_service.get_free_slots(telegram_id=telegram_id, selected_date=selected_date)

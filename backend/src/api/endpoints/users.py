@@ -1,11 +1,11 @@
 from fastapi import Depends, HTTPException, status
-from src.models.db import User
+from backend.src.models.db import User
 from fastapi import APIRouter
-from src.models.schemas import UserCreate, UserAuth
-from src.api.dependencies import get_repository
-from src.repository.crud import UserCRUDRepository
-from src.services.user import UserService
-from src.utilities.exceptions import UserNotFoundException, UserAlreadyAdminException
+from backend.src.models.schemas import UserCreate, UserAuth
+from backend.src.api.dependencies import get_repository
+from backend.src.repository.crud import UserCRUDRepository
+from backend.src.services.user import UserService
+from backend.src.utilities.exceptions import UserNotFoundException, UserAlreadyAdminException
 
 users_router = APIRouter()
 
