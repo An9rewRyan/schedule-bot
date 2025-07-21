@@ -35,8 +35,8 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://ea6e943e8979.ngrok-free.app",
-    "https://61786e357727.ngrok-free.app"
+    "https://0de7fe99dc0a.ngrok-free.app",
+    "https://e187e292b999.ngrok-free.app"
 ]
 
 logger.info(f"Настроенные CORS origins: {origins}")

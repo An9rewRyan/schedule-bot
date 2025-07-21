@@ -108,7 +108,7 @@ class DebugLogger {
             message,
             type
         };
-        
+
         this.logs.push(logEntry);
         if (this.logs.length > this.maxLogs) {
             this.logs.shift();
@@ -116,7 +116,7 @@ class DebugLogger {
 
         const color = this.getColor(type);
         console.log(`%c[${timestamp}] ${message}`, `color: ${color}`);
-        
+
         this.updateDebugDisplay();
     }
 
@@ -134,12 +134,12 @@ class DebugLogger {
 
     updateDebugDisplay() {
         if (!this.debugDiv) return;
-        
+
         const content = this.logs.map(log => {
             const color = this.getColor(log.type);
             return `<span style="color: ${color}">[${log.timestamp}] ${log.message}</span>`;
         }).join('\n');
-        
+
         this.debugDiv.innerHTML = content;
         this.debugDiv.scrollTop = this.debugDiv.scrollHeight;
     }
@@ -199,7 +199,7 @@ function addDebugInfo() {
     debugLogger.log(`Version: ${tg.version}`);
     debugLogger.log(`Platform: ${tg.platform}`);
     debugLogger.log(`User available: ${!!tg.initDataUnsafe?.user}`);
-    
+
     if (tg.initDataUnsafe?.user) {
         debugLogger.log(`User ID: ${tg.initDataUnsafe.user.id} (${typeof tg.initDataUnsafe.user.id})`);
         debugLogger.log(`User name: ${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name || ''}`);
@@ -224,7 +224,7 @@ window.addEventListener('unhandledrejection', (e) => {
 // Инициализируем отладку
 document.addEventListener('DOMContentLoaded', () => {
     addDebugInfo();
-    
+
     // Добавляем информацию о Telegram WebApp
     debugLog('=== TELEGRAM WEBAPP INFO ===');
     debugLog(`Version: ${tg.version}`);
@@ -245,19 +245,25 @@ let selectedTime = null;
 let availableDays = [];
 let availableTimes = [];
 
-// Вспомогательная функция для API запросов с детальным логированием
+// Registration variables
+let currentStep = 1;
+let registrationData = {};
+
+// Вспомогательная функция для API запросов с детальным логированием и таймаутами
 async function apiRequest(url, options = {}) {
     const defaultOptions = {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
+            'ngrok-skip-browser-warning': 'true',
+            'Cache-Control': 'no-cache', // Отключаем кеширование
+            'Pragma': 'no-cache'
         },
         mode: 'cors',
         credentials: 'omit'
     };
-    
+
     // Объединяем опции
     const mergedOptions = {
         ...defaultOptions,
@@ -267,21 +273,28 @@ async function apiRequest(url, options = {}) {
             ...(options.headers || {})
         }
     };
-    
+
     // Логируем запрос
     const method = options.method || 'GET';
     debugLogger.apiRequest(url, method, mergedOptions.headers, options.body);
-    
+
     try {
-        const response = await fetch(url, mergedOptions);
-        
+        // Добавляем таймаут 10 секунд
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout')), 10000);
+        });
+
+        const fetchPromise = fetch(url, mergedOptions);
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+
         // Получаем заголовки ответа
         const responseHeaders = Object.fromEntries(response.headers.entries());
-        
+
         // Клонируем response для чтения body без потери данных
         const responseClone = response.clone();
         let responseBody = null;
-        
+
         // Пытаемся прочитать body как JSON
         try {
             const contentType = response.headers.get('content-type');
@@ -293,12 +306,12 @@ async function apiRequest(url, options = {}) {
         } catch (e) {
             debugLogger.warning(`Не удалось прочитать response body: ${e.message}`);
         }
-        
+
         // Логируем ответ
         debugLogger.apiResponse(url, response.status, responseHeaders, responseBody);
-        
+
         return response;
-        
+
     } catch (error) {
         debugLogger.error(`Ошибка API запроса к ${url}: ${error.message}`);
         debugLogger.error(`Stack trace: ${error.stack}`);
@@ -310,20 +323,20 @@ async function apiRequest(url, options = {}) {
 // Определяем базовый URL из конфигурации
 const API_BASE_URL = (() => {
     debugLogger.log('Определяем API_BASE_URL...');
-    
+
     // Если есть глобальная конфигурация, используем её (приоритет!)
     if (window.config && window.config.API_BASE_URL) {
         debugLogger.log(`✅ Используем API_BASE_URL из config.js: ${window.config.API_BASE_URL}`);
         return window.config.API_BASE_URL;
     }
-    
+
     // Если config не загружен, но запущено в Telegram WebApp - НЕ используем localhost!
     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
         debugLogger.warning('⚠️ Config.js не загружен! В Telegram WebApp НЕ ДОЛЖНО быть localhost!');
         debugLogger.warning('⚠️ Fallback: будем пытаться использовать localhost, но это может не работать');
         return 'http://localhost:8000/api';
     }
-    
+
     // Локальная разработка - используем localhost
     debugLogger.log('🏠 Локальная среда разработки - используем localhost');
     return 'http://localhost:8000/api';
@@ -346,118 +359,700 @@ console.log('API_BASE_URL:', API_BASE_URL);
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        await initializeApp();
-    } catch (error) {
-        console.error('Failed to initialize app:', error);
-        showError('Ошибка инициализации приложения');
-    }
+    debugLogger.log('🌟 === DOM CONTENT LOADED ===');
+
+    // Принудительно скрываем экран загрузки через 3 секунды как fallback
+    const loadingFallback = setTimeout(() => {
+        debugLogger.warning('⚠️ FALLBACK: Принудительно скрываем экран загрузки');
+        const loadingElement = document.getElementById('loading');
+        if (loadingElement && loadingElement.style.display !== 'none') {
+            loadingElement.style.display = 'none';
+            // Если ничего не показано, показываем регистрацию
+            const registrationElement = document.getElementById('registration-screen');
+            const mainElement = document.getElementById('main-content');
+            const successElement = document.getElementById('registration-success-screen');
+
+            if (registrationElement.style.display === 'none' &&
+                mainElement.style.display === 'none' &&
+                successElement.style.display === 'none') {
+                debugLogger.warning('⚠️ Показываем экран регистрации как fallback');
+                showRegistrationScreen();
+            }
+        }
+    }, 3000);
+
+    // Добавляем небольшую задержку для стабилизации Telegram WebApp
+    setTimeout(async () => {
+        try {
+            await initializeApp();
+            // Отменяем fallback таймер, если инициализация прошла успешно
+            clearTimeout(loadingFallback);
+        } catch (error) {
+            // Отменяем fallback таймер, обработка ошибок уже есть в initializeApp
+            clearTimeout(loadingFallback);
+        }
+    }, 100); // 100ms задержка для стабилизации
 });
 
 async function initializeApp() {
-    // Get user info from Telegram
-    const telegramUser = tg.initDataUnsafe?.user;
-    
-    // Для тестирования используем тестового пользователя, если данные Telegram недоступны
-    if (!telegramUser) {
-        console.log('Telegram user data not available, using test user');
-        currentUser = {
-            id: 123456,
-            firstName: "Test",
-            lastName: "User",
-            username: "testuser"
-        };
-    } else {
-        console.log('Telegram user data:', telegramUser);
-        
-        // Валидация и приведение типов для user.id
-        let userId = telegramUser.id;
-        
-        // Проверяем что id является числом или может быть преобразован в число
-        if (typeof userId === 'string') {
-            userId = parseInt(userId, 10);
+    debugLogger.log('🚀 === НАЧАЛО ИНИЦИАЛИЗАЦИИ ПРИЛОЖЕНИЯ ===');
+
+    try {
+        // Get user info from Telegram
+        const telegramUser = tg.initDataUnsafe?.user;
+
+        // Для тестирования используем тестового пользователя, если данные Telegram недоступны
+        if (!telegramUser) {
+            debugLogger.warning('⚠️ Telegram user data not available, using test user');
+            currentUser = {
+                id: 123456,
+                firstName: "Test",
+                lastName: "User",
+                username: "testuser"
+            };
+        } else {
+            debugLogger.log('✅ Telegram user data available');
+
+            // Валидация и приведение типов для user.id
+            let userId = telegramUser.id;
+
+            // Проверяем что id является числом или может быть преобразован в число
+            if (typeof userId === 'string') {
+                userId = parseInt(userId, 10);
+            }
+
+            // Проверяем что id является валидным числом
+            if (!userId || isNaN(userId) || userId <= 0) {
+                debugLogger.error(`❌ Invalid user ID: ${telegramUser.id}`);
+                showError('Ошибка получения данных пользователя. Попробуйте перезапустить приложение.');
+                return;
+            }
+
+            // Initialize user
+            currentUser = {
+                id: userId,
+                firstName: telegramUser.first_name || 'Unknown',
+                lastName: telegramUser.last_name || '',
+                username: telegramUser.username || ''
+            };
+
+            debugLogger.log(`✅ User data processed: ${JSON.stringify(currentUser)}`);
         }
-        
-        // Проверяем что id является валидным числом
-        if (!userId || isNaN(userId) || userId <= 0) {
-            console.error('Invalid user ID:', telegramUser.id);
-            showError('Ошибка получения данных пользователя. Попробуйте перезапустить приложение.');
+
+        debugLogger.log('🔍 Проверяем аутентификацию пользователя...');
+
+        // Check if user is authenticated and get admin status
+        const userExists = await checkUserAuth();
+
+        debugLogger.log(`🔍 Результат проверки аутентификации: ${userExists}`);
+
+        if (!userExists) {
+            debugLogger.log('👤 Пользователь не найден, показываем регистрацию');
+            // Явно скрываем экран загрузки перед показом регистрации
+            document.getElementById('loading').style.display = 'none';
+            showRegistrationScreen();
             return;
         }
-        
-        // Initialize user
-        currentUser = {
-            id: userId,
-            firstName: telegramUser.first_name || 'Unknown',
-            lastName: telegramUser.last_name || '',
-            username: telegramUser.username || ''
-        };
-        
-        console.log('Processed user data:', currentUser);
+
+        debugLogger.log('✅ Пользователь аутентифицирован, загружаем данные...');
+
+        // Load initial data for authenticated user
+        try {
+            await loadAvailableDays();
+            debugLogger.log('✅ Доступные дни загружены');
+        } catch (error) {
+            debugLogger.error(`❌ Ошибка загрузки дней: ${error.message}`);
+            // Не блокируем приложение, показываем основной экран
+        }
+
+        try {
+            await loadUserBookings();
+            debugLogger.log('✅ Записи пользователя загружены');
+        } catch (error) {
+            debugLogger.error(`❌ Ошибка загрузки записей: ${error.message}`);
+            // Не блокируем приложение
+        }
+
+        // Load admin data if user is admin
+        if (isAdmin) {
+            try {
+                await loadAdminData();
+                debugLogger.log('✅ Данные админки загружены');
+            } catch (error) {
+                debugLogger.error(`❌ Ошибка загрузки админ данных: ${error.message}`);
+                // Не блокируем приложение
+            }
+        }
+
+        // Show main content
+        // Явно скрываем экран загрузки перед показом основного контента
+        document.getElementById('loading').style.display = 'none';
+        showMainContent();
+
+        // Set up event listeners
+        setupEventListeners();
+
+        debugLogger.log('✅ === ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА УСПЕШНО ===');
+
+    } catch (error) {
+        debugLogger.error(`❌ === КРИТИЧЕСКАЯ ОШИБКА ИНИЦИАЛИЗАЦИИ ===`);
+        debugLogger.error(`Error: ${error.message}`);
+        debugLogger.error(`Stack: ${error.stack}`);
+
+        // КРИТИЧЕСКИ ВАЖНО: скрываем экран загрузки при ошибке
+        document.getElementById('loading').style.display = 'none';
+
+        // Показываем ошибку пользователю и предлагаем перезагрузку
+        const errorMsg = `Ошибка инициализации: ${error.message}. Попробуйте перезагрузить приложение.`;
+        showError(errorMsg);
+
+        // Альтернативный путь - показать регистрацию
+        setTimeout(() => {
+            debugLogger.log('🔄 Fallback: показываем экран регистрации');
+            closeErrorModal();
+            showRegistrationScreen();
+        }, 3000);
     }
-
-    // Set user name in header
-    document.getElementById('user-name').textContent = 
-        `${currentUser.firstName} ${currentUser.lastName || ''}`;
-
-    // Check if user is authenticated and get admin status
-    await checkUserAuth();
-
-    // Load initial data
-    await loadAvailableDays();
-    await loadUserBookings();
-
-    // Show main content
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-
-    // Set up event listeners
-    setupEventListeners();
 }
 
 async function checkUserAuth() {
     try {
         // Проверяем что currentUser и его id корректны
         if (!currentUser || !currentUser.id || isNaN(currentUser.id)) {
-            console.error('Invalid current user:', currentUser);
-            showError('Ошибка данных пользователя. Попробуйте перезапустить приложение.');
-            return;
+            debugLogger.error(`❌ Invalid current user: ${JSON.stringify(currentUser)}`);
+            return false;
         }
-        
-        console.log('Checking auth for user ID:', currentUser.id);
-        
-        const response = await apiRequest(`${API_BASE_URL}/users/${currentUser.id}`);
-        
+
+        debugLogger.log(`🔍 Checking auth for user ID: ${currentUser.id}`);
+
+        // Добавляем уникальный параметр для избежания кеширования
+        const timestamp = new Date().getTime();
+        const response = await apiRequest(`${API_BASE_URL}/users/${currentUser.id}?_t=${timestamp}`);
+
+        debugLogger.log(`📡 Auth response status: ${response.status}`);
+
         if (!response.ok) {
-            console.error('Auth check failed with status:', response.status);
             if (response.status === 404) {
-                showError('Пользователь не найден. Пожалуйста, зарегистрируйтесь в боте сначала');
-                return;
+                debugLogger.log('👤 User not found - need registration');
+                return false;
+            }
+            if (response.status >= 500) {
+                debugLogger.error(`🔥 Server error ${response.status} - treating as need registration`);
+                return false;
             }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const userData = await response.json();
-        console.log('User data received:', userData);
-        
-        if (userData) {
+        debugLogger.log(`✅ User data received: ${JSON.stringify(userData)}`);
+
+        if (userData && userData.id) {
             isAdmin = userData.is_admin || false;
-            
+            debugLogger.log(`✅ User authenticated, isAdmin: ${isAdmin}`);
+
             // Show admin tab if user is admin
             if (isAdmin) {
-                document.querySelector('.admin-only').style.display = 'block';
-                await loadAdminData();
+                const adminTab = document.querySelector('.admin-only');
+                if (adminTab) {
+                    adminTab.style.display = 'block';
+                }
             }
+
+            return true;
         } else {
-            // User not registered, show registration
-            showError('Пожалуйста, зарегистрируйтесь в боте сначала');
+            debugLogger.log('❌ User data is empty or invalid');
+            return false;
         }
     } catch (error) {
-        console.error('Auth check failed:', error);
-        // Если пользователь не найден, показываем сообщение о регистрации
-        showError('Пожалуйста, зарегистрируйтесь в боте сначала');
+        debugLogger.error(`❌ Auth check failed: ${error.message}`);
+
+        // Специальная обработка для разных типов ошибок
+        if (error.message.includes('timeout')) {
+            debugLogger.error('⏰ Request timeout - treating as need registration');
+            return false;
+        }
+
+        if (error.message.includes('Failed to fetch') || error.name === 'NetworkError') {
+            debugLogger.error('🌐 Network error - treating as need registration');
+            return false;
+        }
+
+        // Для других ошибок тоже возвращаем false (безопасный fallback)
+        return false;
     }
 }
+
+// Registration functions
+function showRegistrationScreen() {
+    debugLogger.log('📝 === ПОКАЗЫВАЕМ ЭКРАН РЕГИСТРАЦИИ ===');
+
+    // Убеждаемся что все экраны скрыты
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('registration-success-screen').style.display = 'none';
+    document.getElementById('registration-screen').style.display = 'flex';
+
+    // Сбрасываем состояние регистрации
+    currentStep = 1;
+    registrationData = {};
+
+    // Очищаем все поля
+    const form = document.getElementById('registration-form');
+    if (form) {
+        form.reset();
+    }
+
+    // Обновляем UI
+    updateRegistrationUI();
+
+    setupRegistrationEventListeners();
+
+    debugLogger.log('✅ Экран регистрации отображен');
+}
+
+function showRegistrationSuccessScreen() {
+    debugLogger.log('🎉 === ПОКАЗЫВАЕМ ЭКРАН УСПЕШНОЙ РЕГИСТРАЦИИ ===');
+
+    // Скрываем экран регистрации и показываем экран загрузки
+    document.getElementById('registration-screen').style.display = 'none';
+    document.getElementById('registration-success-screen').style.display = 'flex';
+
+    // Сбрасываем состояние шагов
+    const steps = ['step-auth', 'step-schedule', 'step-ready'];
+    steps.forEach(stepId => {
+        const step = document.getElementById(stepId);
+        step.classList.remove('completed', 'active');
+    });
+
+    // Первый шаг уже завершен (создание профиля)
+    document.getElementById('step-auth').classList.add('completed');
+
+    debugLogger.log('✅ Экран успешной регистрации отображен');
+}
+
+async function processRegistrationSteps() {
+    debugLogger.log('⚙️ === НАЧИНАЕМ ОБРАБОТКУ ШАГОВ ПОСЛЕ РЕГИСТРАЦИИ ===');
+
+    try {
+        // Шаг 2: Загрузка расписания
+        const scheduleStep = document.getElementById('step-schedule');
+        scheduleStep.classList.add('active');
+
+        await new Promise(resolve => setTimeout(resolve, 800)); // Небольшая пауза для UX
+
+        try {
+            await loadAvailableDays();
+            scheduleStep.classList.remove('active');
+            scheduleStep.classList.add('completed');
+            scheduleStep.querySelector('.step-icon').textContent = '✓';
+            debugLogger.log('✅ Расписание загружено');
+        } catch (error) {
+            debugLogger.error(`❌ Ошибка загрузки расписания: ${error.message}`);
+            // Продолжаем даже при ошибке
+            scheduleStep.classList.remove('active');
+            scheduleStep.classList.add('completed');
+            scheduleStep.querySelector('.step-icon').textContent = '⚠️';
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Шаг 3: Подготовка интерфейса
+        const readyStep = document.getElementById('step-ready');
+        readyStep.classList.add('active');
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        try {
+            await loadUserBookings();
+            debugLogger.log('✅ Записи пользователя загружены');
+        } catch (error) {
+            debugLogger.error(`❌ Ошибка загрузки записей: ${error.message}`);
+            // Продолжаем даже при ошибке
+        }
+
+        readyStep.classList.remove('active');
+        readyStep.classList.add('completed');
+        readyStep.querySelector('.step-icon').textContent = '✓';
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Финальный переход к основному экрану
+        debugLogger.log('🏠 Переходим к основному экрану');
+
+        // Скрываем экран загрузки и показываем основной контент
+        document.getElementById('registration-success-screen').style.display = 'none';
+        showMainContent();
+        setupEventListeners();
+
+        debugLogger.log('✅ === ВСЕ ШАГИ ЗАВЕРШЕНЫ УСПЕШНО ===');
+
+    } catch (error) {
+        debugLogger.error(`❌ Критическая ошибка в шагах регистрации: ${error.message}`);
+
+        // Показываем ошибку но все равно переходим к основному экрану
+        setTimeout(() => {
+            document.getElementById('registration-success-screen').style.display = 'none';
+            showMainContent();
+            setupEventListeners();
+            showError('Некоторые данные не удалось загрузить, но приложение готово к работе.');
+        }, 1000);
+    }
+
+    // УДАЛИТЕ ВСЕ ЧТО НИЖЕ - ЭТО ДУБЛИРОВАННЫЙ КОД ИЗ showRegistrationScreen()
+    // Этот код в конце функции показывает экран регистрации вместо основного!
+}
+
+function showMainContent() {
+    debugLogger.log('🏠 === ПОКАЗЫВАЕМ ОСНОВНОЙ КОНТЕНТ ===');
+
+    // Убеждаемся что все экраны скрыты
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('registration-screen').style.display = 'none';
+    document.getElementById('registration-success-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+
+    // Set user name in header
+    const userNameElement = document.getElementById('user-name');
+    if (userNameElement && currentUser) {
+        userNameElement.textContent = `${currentUser.firstName} ${currentUser.lastName || ''}`;
+    }
+
+    debugLogger.log('✅ Основной контент отображен');
+}
+
+function setupRegistrationEventListeners() {
+    // Step navigation buttons
+    document.getElementById('next-step-1').addEventListener('click', () => {
+        if (validateStep1()) {
+            nextStep();
+        }
+    });
+
+    document.getElementById('prev-step-2').addEventListener('click', prevStep);
+    document.getElementById('next-step-2').addEventListener('click', () => {
+        if (validateStep2()) {
+            nextStep();
+        }
+    });
+
+    document.getElementById('prev-step-3').addEventListener('click', prevStep);
+
+    // Form submission
+    document.getElementById('registration-form').addEventListener('submit', handleRegistrationSubmit);
+
+    // Phone number formatting
+    document.getElementById('phone_number').addEventListener('input', formatPhoneNumber);
+
+    // Real-time validation
+    document.getElementById('first_name').addEventListener('blur', validateFirstName);
+    document.getElementById('phone_number').addEventListener('blur', validatePhone);
+    document.getElementById('age').addEventListener('blur', validateAge);
+}
+
+function validateStep1() {
+    const firstName = document.getElementById('first_name').value.trim();
+
+    if (!firstName) {
+        showFieldError('first_name', 'Пожалуйста, введите ваше имя');
+        return false;
+    }
+
+    if (firstName.length < 2) {
+        showFieldError('first_name', 'Имя должно содержать минимум 2 символа');
+        return false;
+    }
+
+    clearFieldError('first_name');
+
+    // Save data
+    registrationData.first_name = firstName;
+    registrationData.second_name = document.getElementById('second_name').value.trim();
+
+    return true;
+}
+
+function validateStep2() {
+    const phone = document.getElementById('phone_number').value.trim();
+    const age = parseInt(document.getElementById('age').value);
+
+    let isValid = true;
+
+    // Validate phone
+    if (!phone) {
+        showFieldError('phone_number', 'Пожалуйста, введите номер телефона');
+        isValid = false;
+    } else if (!isValidPhone(phone)) {
+        showFieldError('phone_number', 'Введите корректный номер телефона');
+        isValid = false;
+    } else {
+        clearFieldError('phone_number');
+    }
+
+    // Validate age
+    if (!age || age < 16 || age > 100) {
+        showFieldError('age', 'Возраст должен быть от 16 до 100 лет');
+        isValid = false;
+    } else {
+        clearFieldError('age');
+    }
+
+    if (isValid) {
+        // Save data
+        registrationData.phone_number = phone;
+        registrationData.age = age;
+
+        // Update summary
+        updateRegistrationSummary();
+    }
+
+    return isValid;
+}
+
+function validateFirstName() {
+    const firstName = document.getElementById('first_name').value.trim();
+    if (firstName && firstName.length < 2) {
+        showFieldError('first_name', 'Имя должно содержать минимум 2 символа');
+        return false;
+    }
+    clearFieldError('first_name');
+    return true;
+}
+
+function validatePhone() {
+    const phone = document.getElementById('phone_number').value.trim();
+    if (phone && !isValidPhone(phone)) {
+        showFieldError('phone_number', 'Введите корректный номер телефона');
+        return false;
+    }
+    clearFieldError('phone_number');
+    return true;
+}
+
+function validateAge() {
+    const age = parseInt(document.getElementById('age').value);
+    if (age && (age < 16 || age > 100)) {
+        showFieldError('age', 'Возраст должен быть от 16 до 100 лет');
+        return false;
+    }
+    clearFieldError('age');
+    return true;
+}
+
+function isValidPhone(phone) {
+    // Очищаем номер от символов
+    const cleaned = cleanPhoneNumber(phone);
+
+    // Проверяем что номер состоит из 11 цифр и начинается с 7
+    return /^7[0-9]{10}$/.test(cleaned);
+}
+
+function formatPhoneNumber(event) {
+    let value = event.target.value.replace(/\D/g, '');
+
+    if (value.startsWith('8')) {
+        value = '7' + value.slice(1);
+    }
+
+    if (value.startsWith('7') && value.length <= 11) {
+        value = value.replace(/^7(\d{3})(\d{3})(\d{2})(\d{2})$/, '+7 ($1) $2-$3-$4');
+        value = value.replace(/^7(\d{3})(\d{3})(\d{2})$/, '+7 ($1) $2-$3');
+        value = value.replace(/^7(\d{3})(\d{3})$/, '+7 ($1) $2');
+        value = value.replace(/^7(\d{3})$/, '+7 ($1');
+        value = value.replace(/^7(\d{1,2})$/, '+7 ($1');
+        value = value.replace(/^7$/, '+7 (');
+    }
+
+    event.target.value = value;
+}
+
+function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const errorElement = document.getElementById(fieldId + '_error');
+
+    field.classList.add('error');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.classList.add('show');
+    }
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorElement = document.getElementById(fieldId + '_error');
+
+    field.classList.remove('error');
+    if (errorElement) {
+        errorElement.classList.remove('show');
+    }
+}
+
+function nextStep() {
+    currentStep++;
+    updateRegistrationUI();
+}
+
+function prevStep() {
+    currentStep--;
+    updateRegistrationUI();
+}
+
+function updateRegistrationUI() {
+    // Update progress indicators
+    document.querySelectorAll('.progress-step').forEach((step, index) => {
+        const stepNumber = index + 1;
+        step.classList.remove('active', 'completed');
+
+        if (stepNumber < currentStep) {
+            step.classList.add('completed');
+        } else if (stepNumber === currentStep) {
+            step.classList.add('active');
+        }
+    });
+
+    // Update form steps
+    document.querySelectorAll('.form-step').forEach((step, index) => {
+        const stepNumber = index + 1;
+        step.classList.remove('active');
+
+        if (stepNumber === currentStep) {
+            step.classList.add('active');
+        }
+    });
+}
+
+function updateRegistrationSummary() {
+    const summaryContainer = document.getElementById('user-info-summary');
+
+    summaryContainer.innerHTML = `
+        <div class="user-info-item">
+            <span class="user-info-label">Имя:</span>
+            <span class="user-info-value">${registrationData.first_name}</span>
+        </div>
+        ${registrationData.second_name ? `
+        <div class="user-info-item">
+            <span class="user-info-label">Фамилия:</span>
+            <span class="user-info-value">${registrationData.second_name}</span>
+        </div>
+        ` : ''}
+        <div class="user-info-item">
+            <span class="user-info-label">Телефон:</span>
+            <span class="user-info-value">${registrationData.phone_number}</span>
+        </div>
+        <div class="user-info-item">
+            <span class="user-info-label">Возраст:</span>
+            <span class="user-info-value">${registrationData.age} лет</span>
+        </div>
+        <div class="user-info-item" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--tg-theme-hint-color, #e0e0e0);">
+            <span class="user-info-label">Номер для сохранения:</span>
+            <span class="user-info-value" style="font-family: monospace;">${cleanPhoneNumber(registrationData.phone_number)}</span>
+        </div>
+    `;
+}
+
+function cleanPhoneNumber(phone) {
+    // Убираем все символы кроме цифр
+    const digitsOnly = phone.replace(/\D/g, '');
+
+    // Если номер начинается с 8, заменяем на 7
+    if (digitsOnly.startsWith('8') && digitsOnly.length === 11) {
+        return '7' + digitsOnly.slice(1);
+    }
+
+    // Если номер начинается с 7, оставляем как есть
+    if (digitsOnly.startsWith('7') && digitsOnly.length === 11) {
+        return digitsOnly;
+    }
+
+    // Возвращаем как есть для других случаев
+    return digitsOnly;
+}
+
+async function handleRegistrationSubmit(event) {
+    event.preventDefault();
+
+    debugLogger.log('📝 === НАЧАЛО РЕГИСТРАЦИИ ===');
+
+    const submitButton = document.getElementById('submit-registration');
+    submitButton.classList.add('btn-loading');
+    submitButton.disabled = true;
+
+    try {
+        const registerData = {
+            telegram_id: currentUser.id,
+            first_name: registrationData.first_name,
+            second_name: registrationData.second_name || '',
+            phone_number: cleanPhoneNumber(registrationData.phone_number), // Очищаем от форматирования
+            age: registrationData.age
+        };
+
+        debugLogger.log(`📤 Registration data: ${JSON.stringify(registerData)}`);
+
+        // Добавляем уникальный параметр для избежания кеширования
+        const timestamp = new Date().getTime();
+        const response = await apiRequest(`${API_BASE_URL}/users/register?_t=${timestamp}`, {
+            method: 'POST',
+            body: JSON.stringify(registerData)
+        });
+
+        debugLogger.log(`📡 Registration response status: ${response.status}`);
+
+        if (response.ok) {
+            const responseData = await response.json();
+            debugLogger.success(`✅ Регистрация успешна! Response: ${JSON.stringify(responseData)}`);
+
+            // Показываем сообщение об успехе на 1.5 секунды
+            showSuccess('Регистрация прошла успешно! Добро пожаловать!');
+
+            setTimeout(() => {
+                closeSuccessModal();
+
+                // Показываем красивый экран загрузки с шагами
+                showRegistrationSuccessScreen();
+
+                // Запускаем пошаговую обработку
+                processRegistrationSteps();
+
+            }, 1500);
+
+        } else {
+            const errorData = await response.json().catch(() => ({ detail: 'Неизвестная ошибка сервера' }));
+            debugLogger.error(`❌ Registration failed: ${JSON.stringify(errorData)}`);
+
+            let errorMessage = 'Ошибка регистрации. Попробуйте снова.';
+
+            if (response.status === 400) {
+                errorMessage = errorData.detail || 'Пользователь уже зарегистрирован или некорректные данные.';
+            } else if (response.status >= 500) {
+                errorMessage = 'Ошибка сервера. Попробуйте позже.';
+            }
+
+            showError(errorMessage);
+        }
+
+    } catch (error) {
+        debugLogger.error(`❌ Registration error: ${error.message}`);
+        debugLogger.error(`Stack: ${error.stack}`);
+
+        let errorMessage = 'Ошибка соединения. Проверьте интернет и попробуйте снова.';
+
+        if (error.message.includes('timeout')) {
+            errorMessage = 'Превышено время ожидания. Проверьте соединение и попробуйте снова.';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Не удается подключиться к серверу. Проверьте интернет соединение.';
+        }
+
+        showError(errorMessage);
+    } finally {
+        submitButton.classList.remove('btn-loading');
+        submitButton.disabled = false;
+    }
+}
+
+// ========================================
+// EXISTING BOOKING FUNCTIONS
+// ========================================
+// Эти функции были в вашем оригинальном коде
+// и отвечают за основную логику записи на тренировки
 
 async function loadAvailableDays() {
     try {
@@ -468,33 +1063,33 @@ async function loadAvailableDays() {
         debugLog(`Telegram WebApp version: ${tg.version}`);
         debugLog(`Telegram WebApp platform: ${tg.platform}`);
         debugLog(`Is Telegram WebApp: ${tg.isVersionAtLeast('6.0')}`);
-        
+
         // Проверяем доступность API
         debugLog('Проверяем доступность API...');
-        
+
         // Получаем доступные дни через новый endpoint
         const response = await apiRequest(`${API_BASE_URL}/slots/available-days`);
-        
+
         debugLog(`Response status: ${response.status}`);
         debugLog(`Response statusText: ${response.statusText}`);
         debugLog(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
         debugLog(`Response ok: ${response.ok}`);
         debugLog(`Response type: ${response.type}`);
         debugLog(`Response url: ${response.url}`);
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             debugLog(`Response error text: ${errorText}`);
             throw new Error(`HTTP ${response.status} ${response.statusText}: ${errorText}`);
         }
-        
+
         const data = await response.json();
         debugLog(`Response data: ${JSON.stringify(data)}`);
-        
+
         // Используем полученные даты
         availableDays = data.available_days || [];
         debugLog(`Available days: ${JSON.stringify(availableDays)}`);
-        
+
         renderDays();
         debugLog('Days rendered successfully');
     } catch (error) {
@@ -502,21 +1097,21 @@ async function loadAvailableDays() {
         debugLog(`Error type: ${error.constructor.name}`);
         debugLog(`Error message: ${error.message}`);
         debugLog(`Error stack: ${error.stack}`);
-        
+
         // Дополнительная диагностика для разных типов ошибок
         if (error instanceof TypeError) {
             console.error('TypeError - возможно проблема с сетью или CORS');
             console.error('Network state:', navigator.onLine ? 'online' : 'offline');
         }
-        
+
         if (error.name === 'NetworkError') {
             console.error('NetworkError - проблема с сетевым соединением');
         }
-        
+
         if (error.message.includes('Failed to fetch')) {
             console.error('Fetch failed - возможно блокировка CORS или недоступность сервера');
             console.error('Пытаемся проверить доступность сервера...');
-            
+
             // Попробуем простой запрос для проверки доступности
             try {
                 const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
@@ -526,7 +1121,7 @@ async function loadAvailableDays() {
                 console.log('Health check response:', healthResponse);
             } catch (healthError) {
                 console.error('Health check failed:', healthError);
-                
+
                 // Если в Telegram WebApp и ngrok недоступен, попробуем localhost
                 if (API_BASE_URL.includes('ngrok')) {
                     console.log('Ngrok недоступен, пробуем localhost...');
@@ -552,7 +1147,7 @@ async function loadAvailableDays() {
                 }
             }
         }
-        
+
         // Проверим настройки Telegram WebApp
         console.error('=== ДИАГНОСТИКА TELEGRAM WEBAPP ===');
         console.error('tg.initData:', tg.initData);
@@ -565,7 +1160,7 @@ async function loadAvailableDays() {
         console.error('tg.headerColor:', tg.headerColor);
         console.error('tg.backgroundColor:', tg.backgroundColor);
         console.error('tg.isClosingConfirmationEnabled:', tg.isClosingConfirmationEnabled);
-        
+
         showError(`Ошибка загрузки доступных дней: ${error.message}`);
     }
 }
@@ -586,7 +1181,7 @@ function renderDays() {
             <div class="day-name">${formatDayName(day)}</div>
             <div class="day-date">${formatDate(day)}</div>
         `;
-        
+
         dayCard.addEventListener('click', () => selectDay(day));
         daysGrid.appendChild(dayCard);
     });
@@ -594,11 +1189,11 @@ function renderDays() {
 
 function selectDay(day) {
     selectedDay = day;
-    
+
     // Update UI
     document.querySelectorAll('.day-card').forEach(card => card.classList.remove('selected'));
     event.target.closest('.day-card').classList.add('selected');
-    
+
     // Load times for selected day
     loadAvailableTimes(day);
 }
@@ -606,67 +1201,24 @@ function selectDay(day) {
 async function loadAvailableTimes(day) {
     try {
         debugLog(`Loading available times for day: ${day}`);
-        
+
         const response = await apiRequest(`${API_BASE_URL}/slots/?selected_date=${day}&telegram_id=${currentUser.id}`);
         const data = await response.json();
-        
+
         debugLog(`Raw slots data: ${JSON.stringify(data)}`);
-        
+
         // Backend уже возвращает только подходящие для тренировки слоты
         availableTimes = data.available_periods || [];
         debugLog(`Training slots from backend: ${availableTimes.length}`);
-        
+
         renderTimes();
-        
+
         // Show times section
         document.getElementById('times-section').style.display = 'block';
     } catch (error) {
         debugLog(`Failed to load times: ${error.message}`);
         showError('Ошибка загрузки доступного времени');
     }
-}
-
-function processSlotsForTraining(slots) {
-    const goodStartTimes = [];
-    
-    debugLog(`Processing ${slots.length} slots for training`);
-    
-    // Удаляем дубликаты по id
-    const uniqueSlots = slots.filter((slot, index, self) => 
-        index === self.findIndex(s => s.id === slot.id)
-    );
-    
-    debugLog(`After removing duplicates: ${uniqueSlots.length} unique slots`);
-    
-    // Сортируем по времени начала
-    uniqueSlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
-    
-    // Для тренировки нужно 90 минут подряд
-    // Слоты по 60 минут, значит нужно найти начальный слот + еще 30 минут в следующем слоте
-    for (let i = 0; i < uniqueSlots.length - 1; i++) {
-        const currentSlot = uniqueSlots[i];
-        const nextSlot = uniqueSlots[i + 1];
-        
-        // Проверяем, что текущий слот и следующий идут подряд
-        if (currentSlot.end_time === nextSlot.start_time) {
-            // Проверяем, что у нас есть минимум 90 минут
-            const startTime = new Date(`2000-01-01T${currentSlot.start_time}`);
-            const endTime = new Date(`2000-01-01T${nextSlot.end_time}`);
-            const durationMinutes = (endTime - startTime) / (1000 * 60);
-            
-            if (durationMinutes >= 90) {
-                goodStartTimes.push(currentSlot);
-                debugLog(`Valid training slot found: ${currentSlot.start_time} (${durationMinutes} minutes available)`);
-            } else {
-                debugLog(`Insufficient time at ${currentSlot.start_time}: only ${durationMinutes} minutes available`);
-            }
-        } else {
-            debugLog(`Gap between slots: ${currentSlot.end_time} -> ${nextSlot.start_time}`);
-        }
-    }
-    
-    debugLog(`Found ${goodStartTimes.length} valid training slots`);
-    return goodStartTimes;
 }
 
 function renderTimes() {
@@ -684,7 +1236,7 @@ function renderTimes() {
         timeSlot.innerHTML = `
             <div class="time">${formatTime(slot.start_time)}</div>
         `;
-        
+
         timeSlot.addEventListener('click', () => selectTime(slot));
         timesGrid.appendChild(timeSlot);
     });
@@ -692,11 +1244,11 @@ function renderTimes() {
 
 function selectTime(slot) {
     selectedTime = slot;
-    
+
     // Update UI
     document.querySelectorAll('.time-slot').forEach(timeSlot => timeSlot.classList.remove('selected'));
     event.target.closest('.time-slot').classList.add('selected');
-    
+
     // Show confirmation
     showConfirmation();
 }
@@ -704,7 +1256,7 @@ function selectTime(slot) {
 function showConfirmation() {
     const confirmationSection = document.getElementById('confirmation-section');
     const bookingDetails = document.getElementById('booking-details');
-    
+
     bookingDetails.innerHTML = `
         <h3>Подтверждение записи</h3>
         <p><strong>День:</strong> ${formatDayName(selectedDay)}</p>
@@ -712,7 +1264,7 @@ function showConfirmation() {
         <p><strong>Время:</strong> ${formatTime(selectedTime.start_time)}</p>
         <p><strong>Длительность:</strong> 90 минут</p>
     `;
-    
+
     confirmationSection.style.display = 'block';
 }
 
@@ -722,16 +1274,16 @@ async function confirmBooking() {
         debugLog(`Selected time: ${JSON.stringify(selectedTime)}`);
         debugLog(`Selected day: ${selectedDay}`);
         debugLog(`Current user: ${JSON.stringify(currentUser)}`);
-        
+
         // Рассчитываем правильное время окончания
         // Для 90-минутной тренировки нужно найти время окончания через 90 минут
         const startTime = new Date(`2000-01-01T${selectedTime.start_time}`);
         const endTime = new Date(startTime);
         endTime.setMinutes(endTime.getMinutes() + 90);
-        
+
         const calculatedEndTime = endTime.toTimeString().slice(0, 8);
         debugLog(`Calculated end time: ${calculatedEndTime}`);
-        
+
         const bookingData = {
             booking: {
                 date: selectedDay,
@@ -742,16 +1294,16 @@ async function confirmBooking() {
                 telegram_id: currentUser.id
             }
         };
-        
+
         debugLog(`Booking data: ${JSON.stringify(bookingData)}`);
-        
+
         const response = await apiRequest(`${API_BASE_URL}/bookings/`, {
             method: 'POST',
             body: JSON.stringify(bookingData)
         });
 
         debugLog(`Response status: ${response.status}`);
-        
+
         if (response.ok) {
             debugLog('Booking created successfully');
             showSuccess('Запись успешно создана!');
@@ -771,10 +1323,10 @@ async function confirmBooking() {
 function resetBookingFlow() {
     selectedDay = null;
     selectedTime = null;
-    
+
     document.querySelectorAll('.day-card').forEach(card => card.classList.remove('selected'));
     document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
-    
+
     document.getElementById('times-section').style.display = 'none';
     document.getElementById('confirmation-section').style.display = 'none';
 }
@@ -836,7 +1388,7 @@ async function cancelBooking(bookingId) {
 async function rescheduleBooking(bookingId) {
     // First cancel the current booking
     await cancelBooking(bookingId);
-    
+
     // Then switch to booking tab
     switchTab('booking');
 }
@@ -846,10 +1398,10 @@ async function loadAdminData() {
         // Load admin statistics
         const statsResponse = await apiRequest(`${API_BASE_URL}/bookings/stats`);
         const stats = await statsResponse.json();
-        
+
         document.getElementById('total-bookings').textContent = stats.total || 0;
         document.getElementById('today-bookings').textContent = stats.today || 0;
-        
+
         // Load all bookings
         const bookingsResponse = await apiRequest(`${API_BASE_URL}/bookings/all`);
         const allBookings = await bookingsResponse.json();
@@ -894,11 +1446,11 @@ function switchTab(tabName) {
     // Update tab buttons
     document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    
+
     // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.getElementById(tabName).classList.add('active');
-    
+
     // Load data for specific tabs
     if (tabName === 'my-bookings') {
         loadUserBookings();
@@ -916,9 +1468,9 @@ function formatDayName(dateString) {
 
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
-        month: 'long' 
+    return date.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long'
     });
 }
 
@@ -946,4 +1498,4 @@ function closeSuccessModal() {
 
 // Global functions for modal buttons
 window.closeErrorModal = closeErrorModal;
-window.closeSuccessModal = closeSuccessModal; 
+window.closeSuccessModal = closeSuccessModal;
