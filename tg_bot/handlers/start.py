@@ -5,7 +5,7 @@ from aiogram.types import Message
 import logging
 
 # Mini App URL - используем наш ngrok URL для frontend
-MINI_APP_URL = "https://61786e357727.ngrok-free.app"
+MINI_APP_URL = "https://e187e292b999.ngrok-free.app"
 
 router = Router()
 

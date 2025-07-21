@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Запись на тренировки</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -13,6 +16,107 @@
         <div id="loading" class="loading-screen">
             <div class="spinner"></div>
             <p>Загрузка...</p>
+        </div>
+
+        <!-- Registration Screen -->
+        <div id="registration-screen" class="registration-screen" style="display: none;">
+            <div class="registration-container">
+                <div class="registration-header">
+                    <div class="icon">🎯</div>
+                    <h1>Добро пожаловать!</h1>
+                    <p>Для начала работы необходимо заполнить профиль</p>
+                </div>
+
+                <div class="progress-indicator">
+                    <div class="progress-step active" data-step="1"></div>
+                    <div class="progress-step" data-step="2"></div>
+                    <div class="progress-step" data-step="3"></div>
+                </div>
+
+                <form id="registration-form" class="registration-form">
+                    <!-- Step 1: Name -->
+                    <div class="form-step active" data-step="1">
+                        <div class="form-group">
+                            <label for="first_name" class="form-label required">Имя</label>
+                            <input type="text" id="first_name" name="first_name" class="form-input" placeholder="Введите ваше имя" required>
+                            <div class="form-error" id="first_name_error">Пожалуйста, введите ваше имя</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="second_name" class="form-label">Фамилия</label>
+                            <input type="text" id="second_name" name="second_name" class="form-input" placeholder="Введите вашу фамилию">
+                            <div class="form-hint">Это поле необязательно для заполнения</div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="button" class="btn btn-primary" id="next-step-1">Далее</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Phone and Age -->
+                    <div class="form-step" data-step="2">
+                        <div class="form-group">
+                            <label for="phone_number" class="form-label required">Номер телефона</label>
+                            <input type="tel" id="phone_number" name="phone_number" class="form-input" placeholder="+7 (999) 999-99-99" required>
+                            <div class="form-error" id="phone_error">Пожалуйста, введите корректный номер телефона</div>
+                            <div class="form-hint">Номер будет использоваться для связи по записям</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="age" class="form-label required">Возраст</label>
+                            <input type="number" id="age" name="age" class="form-input" placeholder="Ваш возраст" min="16" max="100" required>
+                            <div class="form-error" id="age_error">Возраст должен быть от 16 до 100 лет</div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="button" class="btn btn-secondary" id="prev-step-2">Назад</button>
+                            <button type="button" class="btn btn-primary" id="next-step-2">Далее</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Confirmation -->
+                    <div class="form-step" data-step="3">
+                        <div class="registration-header">
+                            <h2>Проверьте данные</h2>
+                            <p>Убедитесь, что все данные введены корректно</p>
+                        </div>
+
+                        <div class="user-info-display" id="user-info-summary">
+                            <!-- Данные будут заполнены JavaScript -->
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="button" class="btn btn-secondary" id="prev-step-3">Назад</button>
+                            <button type="submit" class="btn btn-primary" id="submit-registration">Зарегистрироваться</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Registration Success Loading Screen -->
+        <div id="registration-success-screen" class="registration-success-screen" style="display: none;">
+            <div class="success-animation">
+                <div class="checkmark-circle">
+                    <div class="checkmark"></div>
+                </div>
+                <h2>Регистрация завершена!</h2>
+                <p>Подготавливаем ваше рабочее пространство...</p>
+                <div class="loading-steps">
+                    <div class="loading-step" id="step-auth">
+                        <div class="step-icon">✓</div>
+                        <span>Создание профиля</span>
+                    </div>
+                    <div class="loading-step" id="step-schedule">
+                        <div class="step-icon">⏳</div>
+                        <span>Загрузка расписания</span>
+                    </div>
+                    <div class="loading-step" id="step-ready">
+                        <div class="step-icon">⏳</div>
+                        <span>Подготовка интерфейса</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -102,7 +206,7 @@
         </div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="app.js"></script>
+    <script src="config.js?v=1.3"></script>
+    <script src="app.js?v=1.3"></script>
 </body>
-</html> 
+</html>
