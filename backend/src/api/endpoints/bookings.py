@@ -59,6 +59,35 @@ async def get_bookings(
     return [UserBookingInfo.from_orm(booking) for booking in bookings]
 
 
+@bookings_router.options("/{booking_id}")
+async def options_booking_by_id(response: Response, booking_id: int):
+    """Handle CORS preflight requests for specific booking endpoint"""
+    logger.info(f"OPTIONS request to /api/bookings/{booking_id}")
+    response.headers["Access-Control-Allow-Methods"] = "DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return {"message": "OK"}
+
+@bookings_router.delete("/{booking_id}")
+async def delete_booking_by_id(
+        booking_id: int,
+        telegram_id: int = Query(..., description="ID пользователя Telegram"),
+        booking_repo: BookingCRUDRepository = Depends(get_repository(repo_type=BookingCRUDRepository)),
+        timeslot_repo: TimeslotCRUDRepository = Depends(get_repository(repo_type=TimeslotCRUDRepository)),
+        user_repo: UserCRUDRepository = Depends(get_repository(repo_type=UserCRUDRepository))
+):
+    logger.info(f"DELETE request to /api/bookings/{booking_id} with telegram_id={telegram_id}")
+    # Создаем сервис с зависимостью от репозитория
+    booking_service = BookingService(booking_repo=booking_repo, user_repo=user_repo, timeslot_repo=timeslot_repo)
+    try:
+        await booking_service.delete_booking(telegram_id, booking_id)
+    except BookingNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Выбранная бронь не принадлежит пользователю, либо не существует",
+        )
+    return {"detail": "Booking deleted successfully"}
+
 @bookings_router.delete("/")
 async def delete_booking(
         booking_id: int,

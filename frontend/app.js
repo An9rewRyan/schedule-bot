@@ -1270,19 +1270,47 @@ function showConfirmation() {
 
 async function confirmBooking() {
     try {
-        debugLog('=== СОЗДАНИЕ БРОНИ ===');
+        // Проверяем, находимся ли мы в режиме переноса
+        const isReschedule = window.rescheduleBookingId;
+        
+        debugLog(isReschedule ? '=== ПЕРЕНОС БРОНИ ===' : '=== СОЗДАНИЕ БРОНИ ===');
         debugLog(`Selected time: ${JSON.stringify(selectedTime)}`);
         debugLog(`Selected day: ${selectedDay}`);
         debugLog(`Current user: ${JSON.stringify(currentUser)}`);
+        if (isReschedule) {
+            debugLog(`Reschedule booking ID: ${window.rescheduleBookingId}`);
+        }
 
         // Рассчитываем правильное время окончания
-        // Для 90-минутной тренировки нужно найти время окончания через 90 минут
         const startTime = new Date(`2000-01-01T${selectedTime.start_time}`);
         const endTime = new Date(startTime);
         endTime.setMinutes(endTime.getMinutes() + 90);
 
         const calculatedEndTime = endTime.toTimeString().slice(0, 8);
         debugLog(`Calculated end time: ${calculatedEndTime}`);
+
+        if (isReschedule) {
+            // Логика переноса: сначала удаляем старое, потом создаем новое
+            debugLog('Удаляем старое бронирование...');
+            const deleteResponse = await apiRequest(`${API_BASE_URL}/bookings/${window.rescheduleBookingId}?telegram_id=${currentUser.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!deleteResponse.ok) {
+                showError('Ошибка удаления старого бронирования');
+                return;
+            }
+            
+            debugLog('Старое бронирование удалено, обновляем доступные слоты...');
+            
+            // Обновляем доступные дни и времена после удаления
+            await loadAvailableDays();
+            if (selectedDay) {
+                await loadAvailableTimes(selectedDay);
+            }
+            
+            debugLog('Создаем новое бронирование...');
+        }
 
         const bookingData = {
             booking: {
@@ -1305,18 +1333,31 @@ async function confirmBooking() {
         debugLog(`Response status: ${response.status}`);
 
         if (response.ok) {
-            debugLog('Booking created successfully');
-            showSuccess('Запись успешно создана!');
+            debugLog(isReschedule ? 'Booking rescheduled successfully' : 'Booking created successfully');
+            showSuccess(isReschedule ? 'Бронирование успешно перенесено!' : 'Запись успешно создана!');
+            
+            // Очищаем режим переноса
+            if (isReschedule) {
+                window.rescheduleBookingId = null;
+                const indicator = document.getElementById('reschedule-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+            
             resetBookingFlow();
             await loadUserBookings();
+            
+            // Переключаемся на вкладку "Мои записи"
+            switchTab('my-bookings');
         } else {
             const error = await response.json();
             debugLog(`Booking error: ${JSON.stringify(error)}`);
-            showError(error.detail || 'Ошибка создания записи');
+            showError(error.detail || (isReschedule ? 'Ошибка переноса записи' : 'Ошибка создания записи'));
         }
     } catch (error) {
         debugLog(`Booking failed: ${error.message}`);
-        showError('Ошибка создания записи');
+        showError(isReschedule ? 'Ошибка переноса записи' : 'Ошибка создания записи');
     }
 }
 
@@ -1329,6 +1370,13 @@ function resetBookingFlow() {
 
     document.getElementById('times-section').style.display = 'none';
     document.getElementById('confirmation-section').style.display = 'none';
+    
+    // Очищаем индикатор переноса если он есть
+    const indicator = document.getElementById('reschedule-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
+    window.rescheduleBookingId = null;
 }
 
 async function loadUserBookings() {
@@ -1375,7 +1423,21 @@ async function cancelBooking(bookingId) {
 
         if (response.ok) {
             showSuccess('Бронирование отменено');
+            
+            // Обновляем список пользовательских бронирований
             await loadUserBookings();
+            
+            // Если пользователь сейчас на вкладке бронирования, обновляем доступные слоты
+            const currentTab = document.querySelector('.nav-tab.active')?.getAttribute('data-tab');
+            if (currentTab === 'booking') {
+                // Обновляем доступные дни
+                await loadAvailableDays();
+                
+                // Если выбран конкретный день, обновляем доступное время для этого дня
+                if (selectedDay) {
+                    await loadAvailableTimes(selectedDay);
+                }
+            }
         } else {
             showError('Ошибка отмены бронирования');
         }
@@ -1386,11 +1448,57 @@ async function cancelBooking(bookingId) {
 }
 
 async function rescheduleBooking(bookingId) {
-    // First cancel the current booking
-    await cancelBooking(bookingId);
+    try {
+        // Сохраняем ID бронирования для переноса
+        window.rescheduleBookingId = bookingId;
+        
+        // Показываем сообщение о переносе
+        showSuccess('Выберите новое время для переноса бронирования');
+        
+        // Переключаемся на вкладку бронирования
+        switchTab('booking');
+        
+        // Загружаем доступные дни
+        await loadAvailableDays();
+        
+        // Добавляем индикатор режима переноса
+        addRescheduleIndicator();
+        
+    } catch (error) {
+        console.error('Reschedule booking failed:', error);
+        showError('Ошибка переноса бронирования');
+    }
+}
 
-    // Then switch to booking tab
-    switchTab('booking');
+function addRescheduleIndicator() {
+    // Добавляем индикатор что мы в режиме переноса
+    const bookingSection = document.getElementById('booking');
+    let indicator = document.getElementById('reschedule-indicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'reschedule-indicator';
+        indicator.className = 'reschedule-indicator';
+        indicator.innerHTML = `
+            <div class="alert alert-info">
+                📝 Режим переноса бронирования. Выберите новое время.
+                <button onclick="cancelReschedule()" class="btn btn-sm btn-secondary" style="margin-left: 10px;">Отменить перенос</button>
+            </div>
+        `;
+        bookingSection.insertBefore(indicator, bookingSection.firstChild);
+    }
+}
+
+function cancelReschedule() {
+    // Отменяем режим переноса
+    window.rescheduleBookingId = null;
+    const indicator = document.getElementById('reschedule-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
+    
+    // Возвращаемся к списку бронирований
+    switchTab('my-bookings');
 }
 
 async function loadAdminData() {
@@ -1439,7 +1547,14 @@ function setupEventListeners() {
 
     // Booking confirmation
     document.getElementById('confirm-booking').addEventListener('click', confirmBooking);
-    document.getElementById('cancel-booking').addEventListener('click', resetBookingFlow);
+    document.getElementById('cancel-booking').addEventListener('click', () => {
+        // Если в режиме переноса, возвращаемся к списку записей
+        if (window.rescheduleBookingId) {
+            cancelReschedule();
+        } else {
+            resetBookingFlow();
+        }
+    });
 }
 
 function switchTab(tabName) {
@@ -1456,6 +1571,9 @@ function switchTab(tabName) {
         loadUserBookings();
     } else if (tabName === 'admin' && isAdmin) {
         loadAdminData();
+    } else if (tabName === 'booking') {
+        // Обновляем доступные дни при переходе на вкладку бронирования
+        loadAvailableDays();
     }
 }
 

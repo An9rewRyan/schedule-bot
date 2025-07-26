@@ -867,3 +867,28 @@ body {
 .error {
     border-color: #f44336 !important;
 }
+
+/* Reschedule indicator */
+.reschedule-indicator {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}

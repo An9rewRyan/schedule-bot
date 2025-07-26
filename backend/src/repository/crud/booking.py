@@ -40,6 +40,27 @@ class BookingCRUDRepository(BaseCRUDRepository):
             raise BookingSaveFailedException(f"Error while saving booking: {str(e)}")
 
     async def delete_booking(self, booking: Booking) -> None:
+        # Сначала удаляем все связи с таймслотами
+        booking_links_stmt = select(BookingTimeSlotLink).where(BookingTimeSlotLink.booking_id == booking.id)
+        booking_links_result = await self.session.execute(booking_links_stmt)
+        booking_links = booking_links_result.scalars().all()
+        
+        # Удаляем связи booking-timeslot
+        for link in booking_links:
+            await self.session.delete(link)
+        
+        # Удаляем связи user-timeslot для этого бронирования
+        user_links_stmt = select(UserTimeSlotLink).where(
+            UserTimeSlotLink.user_id == booking.user_id,
+            UserTimeSlotLink.time_slot_id.in_([link.time_slot_id for link in booking_links])
+        )
+        user_links_result = await self.session.execute(user_links_stmt)
+        user_links = user_links_result.scalars().all()
+        
+        for link in user_links:
+            await self.session.delete(link)
+        
+        # Теперь удаляем само бронирование
         await self.session.delete(booking)
         await self.session.commit()
 

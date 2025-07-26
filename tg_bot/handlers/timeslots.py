@@ -208,27 +208,5 @@ async def cancel_booking(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("RESCHEDULE_"))
 async def reschedule_booking(callback: CallbackQuery):
-    telegram_id = callback.from_user.id
-    # Получаем доступные дни через API
-    booking_id = int(callback.data.split("_")[1])
-    available_days = await get_free_days(telegram_id=telegram_id)
-    booking_deleted = await delete_booking(booking_id, telegram_id)
-
-    if not booking_deleted:
-        await callback.answer("Бронирование не найдено или уже удалено.", show_alert=True)
-        # return
-
-    # Проверяем, есть ли доступные дни
-    if not available_days:
-        await callback.message.edit_text("К сожалению, нет доступных дней для записи.")
-        await callback.answer()
-        return
-
-    # Генерируем клавиатуру с доступными днями
-    keyboard = get_days_keyboard(available_days)
-
-    # Отправляем клавиатуру пользователю
-    await callback.message.edit_text(
-        "На какой день недели хотите записаться?",
-        reply_markup=keyboard
-    )
+    # Перенос работает только в веб-приложении
+    await callback.answer("Для переноса записи используйте веб-приложение", show_alert=True)
