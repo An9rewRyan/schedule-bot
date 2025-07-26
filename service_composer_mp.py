@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""
-Service Composer - инструмент для запуска нескольких команд одновременно на основе YAML конфигурации
-Аналог Docker Compose, но для запуска команд в одном терминале
-
-Использование:
-    python service_composer.py                    # Интерактивное меню
-    python service_composer.py -c config.yaml    # Запуск из конфигурации
-    python service_composer.py --create-config   # Создать пример конфигурации
-"""
 
 import yaml
 import sys
@@ -24,7 +15,7 @@ from typing import Dict, List, Optional
 import importlib.util
 import subprocess
 
-# Цвета для логов
+
 class Colors:
     RESET = '\033[0m'
     BOLD = '\033[1m'
@@ -36,18 +27,15 @@ class Colors:
     CYAN = '\033[36m'
 
 def colored_print(text, color, prefix=""):
-    """Печать цветного текста с префиксом"""
     print(f"{color}{prefix}{text}{Colors.RESET}")
 
 def print_header(title):
-    """Печать красивого заголовка"""
     print("\n" + "="*60)
     colored_print(f" {title} ", Colors.BOLD + Colors.CYAN)
     print("="*60)
 
 @dataclass
 class ServiceConfig:
-    """Конфигурация сервиса"""
     name: str
     command: List[str] = field(default_factory=list)
     working_dir: Optional[str] = None
@@ -56,17 +44,16 @@ class ServiceConfig:
     startup_delay: int = 0
     color: str = "white"
     enabled: bool = True
-    python_function: Optional[str] = None  # Для вызова Python функций
-    module_path: Optional[str] = None      # Путь к модулю с функцией
-    post_start_hook: Optional[str] = None  # Хук, выполняемый после запуска сервиса
+    python_function: Optional[str] = None
+    module_path: Optional[str] = None
+    post_start_hook: Optional[str] = None
 
 @dataclass
 class ComposerConfig:
-    """Главная конфигурация"""
     services: Dict[str, ServiceConfig] = field(default_factory=dict)
     global_env: Dict[str, str] = field(default_factory=dict)
     startup_order: List[str] = field(default_factory=list)
-    hooks: Dict[str, List[str]] = field(default_factory=dict)  # pre_start, post_start, etc
+    hooks: Dict[str, List[str]] = field(default_factory=dict)
 
 class ServiceComposer:
     def __init__(self, config_path: Optional[str] = None):
