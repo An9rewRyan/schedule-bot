@@ -61,12 +61,13 @@ def run_services(service_names=None):
 
     try:
         # Строим команду для запуска
-        cmd = ["python", "service_composer_mp.py", "-c", config_path, "--auto-start"]
+        cmd = ["python", "service_composer_mp.py", "-c", config_path]
 
-        # Добавляем имена сервисов если указаны
+        # В service_composer_mp.py пока нет поддержки выборочного запуска сервисов
+        # Поэтому запускаем все сервисы из конфигурации
         if service_names:
-            cmd.extend(service_names)
-            colored_print(f"🎯 Запуск сервисов: {', '.join(service_names)}", 'green')
+            colored_print(f"🎯 Запуск сервисов: {', '.join(service_names)} (через конфигурацию)", 'green')
+            colored_print("⚠️  Примечание: service_composer_mp.py запустит все сервисы из конфигурации", 'yellow')
         else:
             colored_print("🚀 Запуск всех сервисов", 'green')
 

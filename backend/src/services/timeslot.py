@@ -1,10 +1,10 @@
 import logging
 
-from backend.src.repository.crud.timeslot import TimeslotCRUDRepository
-from backend.src.repository.crud.user import UserCRUDRepository
+from src.repository.crud.timeslot import TimeslotCRUDRepository
+from src.repository.crud.user import UserCRUDRepository
 from datetime import date, time, timedelta
 from typing import Optional, List
-from backend.src.utilities.exceptions import UserNotFoundException
+from src.utilities.exceptions import UserNotFoundException
 
 
 class TimeslotService:

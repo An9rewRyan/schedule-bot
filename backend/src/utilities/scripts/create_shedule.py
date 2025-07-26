@@ -1,10 +1,10 @@
-from backend.src.repository.db import engine
+from src.repository.db import engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import asyncio
-from backend.src.models.db import TimeSlot
+from src.models.db import TimeSlot
 
 from datetime import datetime, timedelta, time
 from sqlmodel import select

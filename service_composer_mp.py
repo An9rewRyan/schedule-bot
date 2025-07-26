@@ -58,6 +58,7 @@ class ServiceConfig:
     enabled: bool = True
     python_function: Optional[str] = None  # Для вызова Python функций
     module_path: Optional[str] = None      # Путь к модулю с функцией
+    post_start_hook: Optional[str] = None  # Хук, выполняемый после запуска сервиса
 
 @dataclass
 class ComposerConfig:
@@ -143,7 +144,8 @@ class ServiceComposer:
                     color=service_config.get('color', 'white'),
                     enabled=service_config.get('enabled', True),
                     python_function=service_config.get('python_function'),
-                    module_path=service_config.get('module_path')
+                    module_path=service_config.get('module_path'),
+                    post_start_hook=service_config.get('post_start_hook')
                 )
                 self.config.services[service_name] = service
                 self.services_status[service_name] = "stopped"
@@ -249,6 +251,29 @@ class ServiceComposer:
             except Exception as e:
                 colored_print(f"❌ Ошибка выполнения хука {hook}: {e}", Colors.RED)
 
+    def run_service_hook(self, hook_name: str, service_name: str):
+        """Выполнение хука сервиса"""
+        if not self.config or hook_name not in self.config.hooks:
+            colored_print(f"⚠️ Хук {hook_name} не найден для сервиса {service_name}", Colors.YELLOW)
+            return
+
+        hooks = self.config.hooks[hook_name]
+        colored_print(f"🪝 Выполнение хука {hook_name} для {service_name}...", Colors.YELLOW)
+
+        for hook in hooks:
+            try:
+                result = subprocess.run(hook, shell=True, capture_output=True, text=True)
+                if result.returncode == 0:
+                    colored_print(f"✅ Хук выполнен: {hook}", Colors.GREEN)
+                    if result.stdout:
+                        print(result.stdout.strip())
+                else:
+                    colored_print(f"❌ Ошибка хука: {hook}", Colors.RED)
+                    if result.stderr:
+                        print(result.stderr.strip())
+            except Exception as e:
+                colored_print(f"❌ Ошибка выполнения хука {hook}: {e}", Colors.RED)
+
     def call_python_function(self, service: ServiceConfig):
         """Вызов Python функции вместо команды"""
         if not service.python_function or not service.module_path:
@@ -328,6 +353,10 @@ class ServiceComposer:
             )
 
             self.services_status[service.name] = "running"
+
+            # Выполнение хука после запуска сервиса
+            if service.post_start_hook:
+                self.run_service_hook(service.post_start_hook, service.name)
 
             # Чтение вывода в реальном времени
             while self.running and proc.poll() is None:

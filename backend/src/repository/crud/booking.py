@@ -1,14 +1,14 @@
 from typing import Optional
 from sqlalchemy.future import select
-from backend.src.models.db import User, TimeSlot, Booking, UserTimeSlotLink
-from backend.src.models.db.booking_timeslot_link import BookingTimeSlotLink
+from src.models.db import User, TimeSlot, Booking, UserTimeSlotLink
+from src.models.db.booking_timeslot_link import BookingTimeSlotLink
 from datetime import date, time
 from sqlalchemy.orm import selectinload
 from fastapi import status
 from fastapi import HTTPException
 from sqlmodel import select
 from .base import BaseCRUDRepository
-from backend.src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, TooSmallBookingDurationException, \
+from src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, TooSmallBookingDurationException, \
     NotEnoughSlotsException, BookingSaveFailedException, RequestedSlotsBusyException
 from typing import List
 

@@ -3,15 +3,15 @@ from fastapi import APIRouter, Depends, Response, Query
 from typing import List, Optional
 import logging
 
-from backend.src.models.schemas import (
+from src.models.schemas import (
     UserBookingInfo,
     BookingInfo,
     UserId,
 )
-from backend.src.api.dependencies import get_repository
-from backend.src.repository.crud import BookingCRUDRepository, TimeslotCRUDRepository, UserCRUDRepository
-from backend.src.services.booking import BookingService
-from backend.src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, BookingRequestException
+from src.api.dependencies import get_repository
+from src.repository.crud import BookingCRUDRepository, TimeslotCRUDRepository, UserCRUDRepository
+from src.services.booking import BookingService
+from src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, BookingRequestException
 from fastapi import Depends, HTTPException, status
 
 logger = logging.getLogger(__name__)

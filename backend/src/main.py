@@ -9,8 +9,8 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from backend.src.api.routers import main_router
-from backend.src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, BookingRequestException
+from src.api.routers import main_router
+from src.utilities.exceptions import UserNotFoundException, BookingNotFoundException, BookingRequestException
 
 # Настройка логирования
 logging.basicConfig(
@@ -35,8 +35,7 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://0de7fe99dc0a.ngrok-free.app",
-    "https://e187e292b999.ngrok-free.app"
+    "https://cf617961ccde.ngrok-free.app"
 ]
 
 logger.info(f"Настроенные CORS origins: {origins}")

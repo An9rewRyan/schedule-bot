@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 import logging
 
-from backend.src.api.endpoints.users import users_router
-from backend.src.api.endpoints.timeslots import timeslots_router
-from backend.src.api.endpoints.bookings import bookings_router
+from src.api.endpoints.users import users_router
+from src.api.endpoints.timeslots import timeslots_router
+from src.api.endpoints.bookings import bookings_router
 
 logger = logging.getLogger(__name__)
 

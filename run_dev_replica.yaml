@@ -40,7 +40,7 @@ services:
     command: python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     working_dir: backend
     color: green
-    startup_delay: 5  # Даем время ngrok запуститься и обновить конфигурации
+    startup_delay: 8  # Даем время ngrok запуститься и обновить конфигурации
     depends_on: [ngrok]  # Зависит от ngrok для обновления CORS
     enabled: true
     restart_on_failure: true
