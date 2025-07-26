@@ -1,232 +1,231 @@
-# Telegram Mini App - Система записи на тренировки
+# Schedule Bot - Universal Training Booking System
 
-Telegram Mini App для записи на тренировки с современным веб-интерфейсом и FastAPI бэкендом.
+A Telegram Mini App for gyms, fitness centers, and sports clubs to manage training session bookings. Includes a web interface, FastAPI backend, and Telegram bot integration.
 
-## 🚀 Быстрый запуск
+## Quick Start
 
-### Автоматический запуск (рекомендуется)
 ```bash
-# Интерактивное меню
-python run_dev.py
+# Clone the repository
+git clone <repository-url>
+cd schedule-bot-3
 
-# Или запуск всех сервисов сразу
-python run_dev.py all
-```
-
-### Запуск отдельных сервисов
-```bash
-python run_dev.py backend   # Backend API (порт 8000)
-python run_dev.py frontend  # Frontend Server (порт 3000)  
-python run_dev.py bot       # Telegram Bot
-python run_dev.py ngrok     # ngrok туннели
-python run_dev.py local     # Backend + Frontend + Bot (без ngrok)
-
-# Остановка сервисов
-python stop_miniapp.py       # Остановка всех сервисов
-```
-
-## 📁 Структура проекта
-
-```
-schedule-bot-1/
-├── run_dev.py            # 🚀 Основной скрипт запуска
-├── update_config.py      # 🔧 Обновление конфигураций
-├── backend/              # FastAPI бэкенд
-│   ├── src/
-│   │   ├── api/         # API endpoints и роутеры
-│   │   ├── models/      # Модели базы данных и схемы
-│   │   ├── services/    # Бизнес-логика
-│   │   ├── repository/  # Работа с БД и CRUD операции
-│   │   └── utilities/   # Утилиты и исключения
-│   └── requirements.txt
-├── frontend/             # Mini App интерфейс
-│   ├── index.html       # Главная страница
-│   ├── styles.css       # Стили
-│   ├── app.js          # JavaScript логика
-│   ├── config.js       # Конфигурация API
-│   └── server.py       # Локальный сервер
-├── tg_bot/              # Telegram бот
-│   ├── handlers/        # Обработчики команд
-│   ├── keyboards/       # Клавиатуры
-│   ├── api/            # API клиенты
-│   ├── middlewares/    # Мидлвары
-│   └── main.py         # Основной файл бота
-└── logs/               # Логи всех сервисов
-```
-
-## ⚙️ Настройка
-
-### 1. Установка зависимостей
-```bash
-# Создание виртуального окружения
-python -m venv .venv
-source .venv/bin/activate  # macOS/Linux
-# или .venv\Scripts\activate  # Windows
-
-# Установка зависимостей
+# Install dependencies
 pip install -r requirements.txt
+# Or if you're using uv:
+uv pip install -r requirements.txt
+
+# Start all services
+python run_dev_yaml.py all
 ```
 
-### 2. Настройка токена бота
-Создайте файл `tg_bot/constants.py`:
-```python
-BOT_TOKEN = "ваш_токен_от_botfather"
+After startup, open the ngrok URL that appears in the logs in your browser.
+
+## Project Structure
+
+```
+schedule-bot-3/
+├── run_dev_yaml.py           # New YAML-based launcher
+├── service_composer_mp.py    # Service orchestration engine  
+├── run_dev_replica.yaml     # Service configuration
+├── scripts/
+│   └── update_ngrok_configs.py # Auto-config updater
+├── backend/
+│   ├── src/
+│   │   ├── main.py          # FastAPI application
+│   │   ├── api/             # REST API endpoints
+│   │   ├── models/          # Database models and schemas
+│   │   ├── services/        # Business logic
+│   │   ├── repository/      # CRUD operations  
+│   │   └── utilities/       # Helper utilities
+│   └── requirements.txt
+├── frontend/
+│   ├── index.html          # Mini App interface
+│   ├── app.js             # Frontend logic
+│   ├── styles.css         # Styles
+│   └── server.py          # Local web server
+├── tg_bot/
+│   ├── main.py            # Telegram bot
+│   ├── handlers/          # Command handlers
+│   ├── keyboards/         # Keyboards
+│   └── api/              # API clients
+└── ngrok.yml             # ngrok configuration
 ```
 
-### 3. Настройка ngrok (для HTTPS)
+## Running the Application
+
+### All services (recommended)
 ```bash
-# Проверка и настройка ngrok
-python check_ngrok.py
+python run_dev_yaml.py all
+```
+Starts ngrok + backend + frontend + telegram bot + auto-config updates.
 
-# Ручная установка (если нужно)
-# macOS: brew install ngrok
-# Windows/Linux: скачайте с https://ngrok.com/download
+### Interactive menu
+```bash
+python run_dev_yaml.py
+```
+Shows a menu to choose what to run.
 
-# Настройка authtoken
+### Individual services
+```bash
+python run_dev_yaml.py backend    # API server only
+python run_dev_yaml.py frontend   # Web interface only  
+python run_dev_yaml.py bot        # Telegram bot only
+python run_dev_yaml.py ngrok      # ngrok tunnels only
+python run_dev_yaml.py local      # Without ngrok (local only)
+```
+
+### Stopping services
+```bash
+python stop_miniapp.py
+```
+
+## Configuration
+
+### Bot Token
+Create `tg_bot/constants.py`:
+```python
+BOT_TOKEN = "your_bot_token_from_botfather"
+```
+
+### ngrok
+Required for HTTPS and Telegram Mini App functionality:
+```bash
+# Installation (macOS)
+brew install ngrok
+
+# Or download from https://ngrok.com/download
+
+# Add your authtoken
 ngrok config add-authtoken YOUR_TOKEN
 ```
 
-## 🌐 Доступные URL
+### Database
+Uses SQLite by default. For production, configure PostgreSQL in `backend/src/repository/db.py`.
 
-После запуска с ngrok (`python run_dev.py all`):
-- **Frontend (HTTPS):** https://XXXXXX.ngrok-free.app
-- **Backend API (HTTPS):** https://YYYYYY.ngrok-free.app/api
-- **API Документация:** https://YYYYYY.ngrok-free.app/api/docs
+## How It Works
 
-После локального запуска (`python run_dev.py local`):
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8000/api
-- **API Документация:** http://localhost:8000/api/docs
+1. **ngrok** starts first and creates HTTPS tunnels
+2. **update_ngrok_configs.py** automatically updates configurations with new URLs
+3. **backend** starts with updated CORS settings
+4. **frontend** gets the current API URL
+5. **telegram bot** gets the current Mini App URL
 
-## 📱 Настройка Mini App в Telegram
+All the magic happens in `run_dev_replica.yaml` - it describes the startup order and hooks for auto-updates.
 
-1. Откройте @BotFather в Telegram
-2. Выберите команду `/newapp` 
-3. Выберите вашего бота
-4. Введите название: "Запись на тренировки"
-5. Введите описание: "Система бронирования тренировок"
-6. Введите URL Mini App (покажется после запуска `run_dev.py all`)
+## Setting Up Mini App in Telegram
 
-## 🎯 Основные функции
+After running `python run_dev_yaml.py all`:
 
-### Для пользователей:
-- ✅ Просмотр доступных временных слотов
-- ✅ Выбор времени тренировки
-- ✅ Подтверждение записи
-- ✅ Просмотр своих записей
-- ✅ Отмена записей
+1. Find the frontend URL in logs (like `https://XXXXX.ngrok-free.app`)
+2. Open @BotFather in Telegram
+3. Use `/newapp` command
+4. Select your bot
+5. App name: "Training Booking"  
+6. Description: "Book your training sessions"
+7. Paste the URL from logs
+8. Upload an icon (optional)
 
-### Для администраторов:
-- ✅ Просмотр всех записей
-- ✅ Создание расписания тренировок
-- ✅ Управление пользователями
-- ✅ Статистика посещений
+## Features
 
-## 🔧 Разработка
+### For Users:
+- View available time slots for selected dates
+- Book training sessions
+- View their bookings
+- Cancel reservations
 
-### Горячая перезагрузка
-Все сервисы запускаются с автоматической перезагрузкой при изменении файлов:
-- Backend: uvicorn с флагом `--reload`
-- Frontend: встроенный сервер с автообновлением
-- Bot: автоматический перезапуск при изменениях
+### For Admins:
+- Create weekly schedules
+- View all bookings
+- Manage users
+- Get attendance statistics
 
-### Логирование
-Все логи отображаются в терминале с цветными префиксами:
-- `[Backend API]` - зеленый
-- `[Frontend]` - синий  
-- `[Telegram Bot]` - фиолетовый
-- `[ngrok]` - голубой
+## Development
 
-### Обновление конфигураций
-При запуске с ngrok автоматически обновляются:
-- CORS настройки в backend
-- API URL в frontend
-- Mini App URL в боте
+### Hot Reload
+All services support live reloading:
+- Backend: uvicorn with `--reload`
+- Frontend: built-in live reload
+- Bot: auto-restart on file changes
 
-## 🐛 Отладка
+### Logs
+Color-coded logs by service:
+- `[ngrok]` - cyan
+- `[backend]` - green  
+- `[frontend]` - blue
+- `[telegram_bot]` - magenta
 
-### Проверка системы
+### Useful Scripts
 ```bash
-python diagnose.py  # Полная диагностика проекта
+python diagnose.py           # System diagnostics
+python view_logs.py          # View all logs
+python clear_timeslots.py    # Clear time slots
+python create_schedule.py    # Create test schedule
 ```
 
-### Просмотр логов
-```bash
-python view_logs.py           # Все логи
-python view_logs.py -s backend # Только backend
-python view_logs.py -f         # В реальном времени
-```
+## Troubleshooting
 
-### Очистка данных
-```bash
-python clear_timeslots.py    # Очистка временных слотов
-```
+### Backend import errors
+All fixed! Wrong paths `backend.src.*` were changed to `src.*`.
 
-## 🛠️ Устранение неполадок
+### ngrok won't start
+1. Check installation: `which ngrok`
+2. Check authtoken: `ngrok config check`
+3. Or run locally: `python run_dev_yaml.py local`
 
-### Ошибки импорта
-1. Убедитесь, что виртуальное окружение активировано
-2. Установите зависимости: `pip install -r requirements.txt`
+### Mini App won't open
+1. Make sure you're using the HTTPS URL from ngrok
+2. Verify CORS is configured correctly (update script should handle this)
+3. Open the URL in browser first, then in Telegram
 
-### Проблемы с ngrok
-1. Проверьте установку: `python check_ngrok.py`
-2. Используйте локальный запуск: `python run_dev.py local`
+### Hooks not executing
+Updated `service_composer_mp.py` to support service-level hooks. The `after_ngrok_start` hook runs right after ngrok starts.
 
-### Проблемы с ботом
-1. Проверьте токен в `tg_bot/constants.py`
-2. Убедитесь, что бот запущен: `/start` в Telegram
+## API
 
-## 📋 Требования
+Backend is available at:
+- Local: http://localhost:8000/api
+- ngrok: https://XXXXX.ngrok-free.app/api
+- Documentation: /docs or /redoc
 
-- **Python:** 3.10+
-- **PostgreSQL:** 12+ (или SQLite для разработки)
-- **ngrok:** Для HTTPS поддержки (опционально)
-- **Telegram Bot Token:** От @BotFather
+Main endpoints:
+- `GET /slots/` - list time slots
+- `POST /bookings/` - create booking
+- `GET /bookings/user/{telegram_id}` - user bookings
+- `DELETE /bookings/{booking_id}` - cancel booking
 
-## 🚀 Развертывание в продакшене
+## Requirements
 
-### Подготовка
-1. Настройте PostgreSQL базу данных
-2. Обновите переменные окружения
-3. Настройте HTTPS домен
+- Python 3.10+
+- ngrok (for Mini App)
+- Telegram bot token
+- PostgreSQL (optional, for production)
 
-### Развертывание backend
-```bash
-cd backend
-uvicorn src.main:app --host 0.0.0.0 --port 8000
-```
+## Customization
 
-### Развертывание frontend
-Загрузите файлы из `frontend/` на веб-сервер или CDN.
+This system is designed to be universal for any training-based business:
 
-### Развертывание бота
-```bash
-cd tg_bot  
-python main.py
-```
+### Gym/Fitness Center
+- Configure time slots for different workout types
+- Set up trainer-specific sessions
+- Manage equipment bookings
 
-## 📄 Лицензия
+### Sports Club
+- Schedule practice sessions
+- Book courts/fields
+- Manage team training slots
 
-Этот проект распространяется под лицензией Creative Commons BY-NC-SA 4.0:
-- ✅ Можно изучать и улучшать код
-- ✅ Можно использовать в некоммерческих целях
-- ❌ Запрещено коммерческое использование
-- ❌ При модификации должна сохраняться та же лицензия
+### Martial Arts Studio
+- Class scheduling
+- Private lesson bookings
+- Belt testing appointments
 
-## 🤝 Вклад в проект
+### Dance Studio
+- Group class registration
+- Private lesson scheduling
+- Studio rental bookings
 
-1. Fork репозитория
-2. Создайте ветку для новой функции
-3. Внесите изменения
-4. Создайте Pull Request
+Simply modify the slot names, durations, and business logic in the backend to fit your specific needs.
 
-## 📞 Поддержка
+## License
 
-При возникновении проблем:
-1. Проверьте [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-2. Запустите диагностику: `python diagnose.py`
-3. Создайте Issue с описанием проблемы
-
-## 📄 Лицензия
-
-CC BY-NC-SA 4.0
+MIT License. Use it however you want, but at your own risk 🙂
