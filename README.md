@@ -100,7 +100,35 @@ ngrok config add-authtoken YOUR_TOKEN
 ```
 
 ### Database
-Uses SQLite by default. For production, configure PostgreSQL in `backend/src/repository/db.py`.
+**Requires PostgreSQL** - the project is configured to use PostgreSQL with asyncpg driver.
+
+1. Install and start PostgreSQL:
+```bash
+# macOS
+brew install postgresql
+brew services start postgresql
+
+# Ubuntu/Debian
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+
+# Create database (using default settings from db.py)
+sudo -u postgres psql
+CREATE DATABASE main;
+ALTER USER postgres PASSWORD '1234';
+\q
+```
+
+2. Default connection (in `backend/src/repository/db.py`):
+```python
+DB_URL = os.getenv('DATABASE_URL', 'postgresql+asyncpg://postgres:1234@localhost:5432/main')
+```
+
+3. To change database credentials, either:
+   - Set `DATABASE_URL` environment variable
+   - Modify the default URL in `backend/src/repository/db.py`
+
+**Required Python packages**: `asyncpg` (already in requirements.txt)
 
 ## How It Works
 
@@ -228,4 +256,14 @@ Simply modify the slot names, durations, and business logic in the backend to fi
 
 ## License
 
-MIT License. Use it however you want, but at your own risk 🙂
+This project is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+
+What this means:
+- ✅ You can use, study, and modify the code
+- ✅ You can share it with others
+- ✅ You can adapt it for your needs
+- ❌ No commercial use without permission
+- ❌ If you modify and share it, you must use the same license
+- ❌ You must give proper attribution
+
+See the [LICENSE](LICENSE) file for the full legal text.
