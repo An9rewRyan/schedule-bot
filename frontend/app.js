@@ -1,3 +1,6 @@
+// Import config module
+import { config } from './js/modules/config.js';
+
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 tg.ready();
@@ -19,223 +22,11 @@ if (tg.initDataUnsafe?.user) {
 }
 console.log('=== END TELEGRAM WEBAPP INITIALIZATION ===');
 
-// Улучшенное логирование с debug окном
-class DebugLogger {
-    constructor() {
-        this.logs = [];
-        this.maxLogs = 100;
-        this.debugDiv = null;
-        this.debugBtn = null;
-        this.isVisible = false;
-        this.init();
-    }
 
-    init() {
-        this.createDebugUI();
-        this.log('🚀 Debug Logger инициализирован');
-    }
 
-    createDebugUI() {
-        // Debug окно
-        this.debugDiv = document.createElement('div');
-        this.debugDiv.id = 'debug-console';
-        this.debugDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.95);
-            color: #00ff00;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            z-index: 10000;
-            overflow-y: auto;
-            display: none;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        `;
-        document.body.appendChild(this.debugDiv);
 
-        // Debug кнопка
-        this.debugBtn = document.createElement('button');
-        this.debugBtn.textContent = '🐛';
-        this.debugBtn.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 10001;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 16px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        `;
-        this.debugBtn.onclick = () => this.toggle();
-        document.body.appendChild(this.debugBtn);
 
-        // Кнопка очистки логов
-        const clearBtn = document.createElement('button');
-        clearBtn.textContent = '🗑️ Очистить';
-        clearBtn.style.cssText = `
-            position: fixed;
-            top: 60px;
-            right: 10px;
-            z-index: 10001;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            padding: 5px 10px;
-            font-size: 12px;
-            cursor: pointer;
-            display: none;
-        `;
-        clearBtn.onclick = () => this.clear();
-        clearBtn.id = 'clear-debug-btn';
-        document.body.appendChild(clearBtn);
-    }
 
-    log(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = {
-            timestamp,
-            message,
-            type
-        };
-
-        this.logs.push(logEntry);
-        if (this.logs.length > this.maxLogs) {
-            this.logs.shift();
-        }
-
-        const color = this.getColor(type);
-        console.log(`%c[${timestamp}] ${message}`, `color: ${color}`);
-
-        this.updateDebugDisplay();
-    }
-
-    getColor(type) {
-        const colors = {
-            'info': '#00ff00',
-            'error': '#ff0000',
-            'warning': '#ffff00',
-            'api': '#00bfff',
-            'response': '#ffa500',
-            'success': '#00ff00'
-        };
-        return colors[type] || '#ffffff';
-    }
-
-    updateDebugDisplay() {
-        if (!this.debugDiv) return;
-
-        const content = this.logs.map(log => {
-            const color = this.getColor(log.type);
-            return `<span style="color: ${color}">[${log.timestamp}] ${log.message}</span>`;
-        }).join('\n');
-
-        this.debugDiv.innerHTML = content;
-        this.debugDiv.scrollTop = this.debugDiv.scrollHeight;
-    }
-
-    toggle() {
-        this.isVisible = !this.isVisible;
-        this.debugDiv.style.display = this.isVisible ? 'block' : 'none';
-        document.getElementById('clear-debug-btn').style.display = this.isVisible ? 'block' : 'none';
-        this.debugBtn.textContent = this.isVisible ? '❌' : '🐛';
-    }
-
-    clear() {
-        this.logs = [];
-        this.updateDebugDisplay();
-        this.log('🗑️ Логи очищены');
-    }
-
-    // Специальные методы для разных типов сообщений
-    apiRequest(url, method, headers, body) {
-        this.log(`🌐 ${method} ${url}`, 'api');
-        this.log(`📤 Headers: ${JSON.stringify(headers, null, 2)}`, 'api');
-        if (body) {
-            this.log(`📤 Body: ${JSON.stringify(body, null, 2)}`, 'api');
-        }
-    }
-
-    apiResponse(url, status, headers, body) {
-        const type = status >= 200 && status < 300 ? 'success' : 'error';
-        this.log(`📥 Response ${status} from ${url}`, type);
-        if (headers) {
-            this.log(`📥 Response Headers: ${JSON.stringify(headers, null, 2)}`, 'response');
-        }
-        if (body) {
-            this.log(`📥 Response Body: ${JSON.stringify(body, null, 2)}`, 'response');
-        }
-    }
-
-    error(message) {
-        this.log(`❌ ${message}`, 'error');
-    }
-
-    warning(message) {
-        this.log(`⚠️ ${message}`, 'warning');
-    }
-
-    success(message) {
-        this.log(`✅ ${message}`, 'success');
-    }
-}
-
-// Создаем глобальный экземпляр логгера
-const debugLogger = new DebugLogger();
-
-// Добавляем отладочную информацию в интерфейс для Telegram
-function addDebugInfo() {
-    debugLogger.log('=== TELEGRAM WEBAPP INFO ===');
-    debugLogger.log(`Version: ${tg.version}`);
-    debugLogger.log(`Platform: ${tg.platform}`);
-    debugLogger.log(`User available: ${!!tg.initDataUnsafe?.user}`);
-
-    if (tg.initDataUnsafe?.user) {
-        debugLogger.log(`User ID: ${tg.initDataUnsafe.user.id} (${typeof tg.initDataUnsafe.user.id})`);
-        debugLogger.log(`User name: ${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name || ''}`);
-    }
-    debugLogger.log('=== END TELEGRAM WEBAPP INFO ===');
-}
-
-// Функция для добавления отладочной информации (обратная совместимость)
-function debugLog(message) {
-    debugLogger.log(message);
-}
-
-// Перехватываем ошибки
-window.addEventListener('error', (e) => {
-    debugLogger.error(`${e.message} at ${e.filename}:${e.lineno}`);
-});
-
-window.addEventListener('unhandledrejection', (e) => {
-    debugLogger.error(`UNHANDLED PROMISE REJECTION: ${e.reason}`);
-});
-
-// Инициализируем отладку
-document.addEventListener('DOMContentLoaded', () => {
-    addDebugInfo();
-
-    // Добавляем информацию о Telegram WebApp
-    debugLog('=== TELEGRAM WEBAPP INFO ===');
-    debugLog(`Version: ${tg.version}`);
-    debugLog(`Platform: ${tg.platform}`);
-    debugLog(`User available: ${!!tg.initDataUnsafe?.user}`);
-    if (tg.initDataUnsafe?.user) {
-        debugLog(`User ID: ${tg.initDataUnsafe.user.id} (${typeof tg.initDataUnsafe.user.id})`);
-        debugLog(`User name: ${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name}`);
-    }
-    debugLog('=== END TELEGRAM WEBAPP INFO ===');
-});
 
 // Global variables
 let currentUser = null;
@@ -274,10 +65,6 @@ async function apiRequest(url, options = {}) {
         }
     };
 
-    // Логируем запрос
-    const method = options.method || 'GET';
-    debugLogger.apiRequest(url, method, mergedOptions.headers, options.body);
-
     try {
         // Добавляем таймаут 10 секунд
         const timeoutPromise = new Promise((_, reject) => {
@@ -285,85 +72,26 @@ async function apiRequest(url, options = {}) {
         });
 
         const fetchPromise = fetch(url, mergedOptions);
-
         const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-        // Получаем заголовки ответа
-        const responseHeaders = Object.fromEntries(response.headers.entries());
-
-        // Клонируем response для чтения body без потери данных
-        const responseClone = response.clone();
-        let responseBody = null;
-
-        // Пытаемся прочитать body как JSON
-        try {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                responseBody = await responseClone.json();
-            } else {
-                responseBody = await responseClone.text();
-            }
-        } catch (e) {
-            debugLogger.warning(`Не удалось прочитать response body: ${e.message}`);
-        }
-
-        // Логируем ответ
-        debugLogger.apiResponse(url, response.status, responseHeaders, responseBody);
-
+        
         return response;
 
     } catch (error) {
-        debugLogger.error(`Ошибка API запроса к ${url}: ${error.message}`);
-        debugLogger.error(`Stack trace: ${error.stack}`);
+        console.error(`API request failed to ${url}:`, error.message);
         throw error;
     }
 }
 
-// API configuration
-// Определяем базовый URL из конфигурации
-const API_BASE_URL = (() => {
-    debugLogger.log('Определяем API_BASE_URL...');
-
-    // Если есть глобальная конфигурация, используем её (приоритет!)
-    if (window.config && window.config.API_BASE_URL) {
-        debugLogger.log(`✅ Используем API_BASE_URL из config.js: ${window.config.API_BASE_URL}`);
-        return window.config.API_BASE_URL;
-    }
-
-    // Если config не загружен, но запущено в Telegram WebApp - НЕ используем localhost!
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-        debugLogger.warning('⚠️ Config.js не загружен! В Telegram WebApp НЕ ДОЛЖНО быть localhost!');
-        debugLogger.warning('⚠️ Fallback: будем пытаться использовать localhost, но это может не работать');
-        return 'http://localhost:8000/api';
-    }
-
-    // Локальная разработка - используем localhost
-    debugLogger.log('🏠 Локальная среда разработки - используем localhost');
-    return 'http://localhost:8000/api';
-})();
-
-// Диагностика конфигурации
-debugLogger.log('=== ДИАГНОСТИКА КОНФИГУРАЦИИ ===');
-debugLogger.log(`window.config доступен: ${!!window.config}`);
-if (window.config) {
-    debugLogger.log(`config.API_BASE_URL: ${window.config.API_BASE_URL}`);
-} else {
-    debugLogger.error('❌ window.config НЕ НАЙДЕН! Config.js не загружен или ошибка');
-}
-debugLogger.log(`Telegram WebApp доступен: ${!!window.Telegram?.WebApp}`);
-debugLogger.log(`initData доступен: ${!!window.Telegram?.WebApp?.initData}`);
-debugLogger.log(`ИТОГОВЫЙ API_BASE_URL: ${API_BASE_URL}`);
-debugLogger.log('=== КОНЕЦ ДИАГНОСТИКИ ===');
-
-console.log('API_BASE_URL:', API_BASE_URL);
+// API configuration - will be initialized after config module
+let API_BASE_URL = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async function() {
-    debugLogger.log('🌟 === DOM CONTENT LOADED ===');
+    console.log('DOM Content Loaded');
 
     // Принудительно скрываем экран загрузки через 3 секунды как fallback
     const loadingFallback = setTimeout(() => {
-        debugLogger.warning('⚠️ FALLBACK: Принудительно скрываем экран загрузки');
+        console.warn('FALLBACK: Force hiding loading screen');
         const loadingElement = document.getElementById('loading');
         if (loadingElement && loadingElement.style.display !== 'none') {
             loadingElement.style.display = 'none';
@@ -375,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (registrationElement.style.display === 'none' &&
                 mainElement.style.display === 'none' &&
                 successElement.style.display === 'none') {
-                debugLogger.warning('⚠️ Показываем экран регистрации как fallback');
+                console.warn('Showing registration screen as fallback');
                 showRegistrationScreen();
             }
         }
@@ -395,15 +123,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 async function initializeApp() {
-    debugLogger.log('🚀 === НАЧАЛО ИНИЦИАЛИЗАЦИИ ПРИЛОЖЕНИЯ ===');
+    console.log('Initializing app...');
 
     try {
+        // Initialize config first
+        await config.initialize();
+        API_BASE_URL = config.getBackendUrl();
+        console.log('Config initialized. Backend URL:', API_BASE_URL);
         // Get user info from Telegram
         const telegramUser = tg.initDataUnsafe?.user;
 
         // Для тестирования используем тестового пользователя, если данные Telegram недоступны
         if (!telegramUser) {
-            debugLogger.warning('⚠️ Telegram user data not available, using test user');
+            console.warn('Telegram user data not available, using test user');
             currentUser = {
                 id: 123456,
                 firstName: "Test",
@@ -411,7 +143,7 @@ async function initializeApp() {
                 username: "testuser"
             };
         } else {
-            debugLogger.log('✅ Telegram user data available');
+            console.log('Telegram user data available');
 
             // Валидация и приведение типов для user.id
             let userId = telegramUser.id;
@@ -423,7 +155,7 @@ async function initializeApp() {
 
             // Проверяем что id является валидным числом
             if (!userId || isNaN(userId) || userId <= 0) {
-                debugLogger.error(`❌ Invalid user ID: ${telegramUser.id}`);
+                console.error('Invalid user ID:', telegramUser.id);
                 showError('Ошибка получения данных пользователя. Попробуйте перезапустить приложение.');
                 return;
             }
@@ -436,40 +168,38 @@ async function initializeApp() {
                 username: telegramUser.username || ''
             };
 
-            debugLogger.log(`✅ User data processed: ${JSON.stringify(currentUser)}`);
+            console.log('User data processed:', currentUser);
         }
 
-        debugLogger.log('🔍 Проверяем аутентификацию пользователя...');
+        console.log('Checking user authentication...');
 
         // Check if user is authenticated and get admin status
         const userExists = await checkUserAuth();
 
-        debugLogger.log(`🔍 Результат проверки аутентификации: ${userExists}`);
+        console.log('Authentication result:', userExists);
 
         if (!userExists) {
-            debugLogger.log('👤 Пользователь не найден, показываем регистрацию');
+            console.log('User not found, showing registration');
             // Явно скрываем экран загрузки перед показом регистрации
             document.getElementById('loading').style.display = 'none';
             showRegistrationScreen();
             return;
         }
 
-        debugLogger.log('✅ Пользователь аутентифицирован, загружаем данные...');
+        console.log('User authenticated, loading data...');
 
         // Load initial data for authenticated user
         try {
             await loadAvailableDays();
-            debugLogger.log('✅ Доступные дни загружены');
         } catch (error) {
-            debugLogger.error(`❌ Ошибка загрузки дней: ${error.message}`);
+            console.error('Failed to load available days:', error.message);
             // Не блокируем приложение, показываем основной экран
         }
 
         try {
             await loadUserBookings();
-            debugLogger.log('✅ Записи пользователя загружены');
         } catch (error) {
-            debugLogger.error(`❌ Ошибка загрузки записей: ${error.message}`);
+            console.error('Failed to load user bookings:', error.message);
             // Не блокируем приложение
         }
 
@@ -477,9 +207,8 @@ async function initializeApp() {
         if (isAdmin) {
             try {
                 await loadAdminData();
-                debugLogger.log('✅ Данные админки загружены');
             } catch (error) {
-                debugLogger.error(`❌ Ошибка загрузки админ данных: ${error.message}`);
+                console.error('Failed to load admin data:', error.message);
                 // Не блокируем приложение
             }
         }
@@ -492,23 +221,28 @@ async function initializeApp() {
         // Set up event listeners
         setupEventListeners();
 
-        debugLogger.log('✅ === ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА УСПЕШНО ===');
+        console.log('App initialization completed successfully');
 
     } catch (error) {
-        debugLogger.error(`❌ === КРИТИЧЕСКАЯ ОШИБКА ИНИЦИАЛИЗАЦИИ ===`);
-        debugLogger.error(`Error: ${error.message}`);
-        debugLogger.error(`Stack: ${error.stack}`);
+        console.error('Critical initialization error:', error.message);
+        console.error('Stack:', error.stack);
 
         // КРИТИЧЕСКИ ВАЖНО: скрываем экран загрузки при ошибке
         document.getElementById('loading').style.display = 'none';
 
-        // Показываем ошибку пользователю и предлагаем перезагрузку
+        // Если ошибка связана с ngrok/config, используем alert
+        if (error.message.includes('Ngrok недоступен')) {
+            alert(error.message);
+            return;
+        }
+
+        // Для других ошибок показываем modal
         const errorMsg = `Ошибка инициализации: ${error.message}. Попробуйте перезагрузить приложение.`;
         showError(errorMsg);
 
         // Альтернативный путь - показать регистрацию
         setTimeout(() => {
-            debugLogger.log('🔄 Fallback: показываем экран регистрации');
+            console.log('Fallback: showing registration screen');
             closeErrorModal();
             showRegistrationScreen();
         }, 3000);
@@ -519,36 +253,33 @@ async function checkUserAuth() {
     try {
         // Проверяем что currentUser и его id корректны
         if (!currentUser || !currentUser.id || isNaN(currentUser.id)) {
-            debugLogger.error(`❌ Invalid current user: ${JSON.stringify(currentUser)}`);
+            console.error('Invalid current user:', currentUser);
             return false;
         }
 
-        debugLogger.log(`🔍 Checking auth for user ID: ${currentUser.id}`);
+        console.log('Checking auth for user ID:', currentUser.id);
 
         // Добавляем уникальный параметр для избежания кеширования
         const timestamp = new Date().getTime();
         const response = await apiRequest(`${API_BASE_URL}/users/${currentUser.id}?_t=${timestamp}`);
 
-        debugLogger.log(`📡 Auth response status: ${response.status}`);
-
         if (!response.ok) {
             if (response.status === 404) {
-                debugLogger.log('👤 User not found - need registration');
+                console.log('User not found - need registration');
                 return false;
             }
             if (response.status >= 500) {
-                debugLogger.error(`🔥 Server error ${response.status} - treating as need registration`);
+                console.error('Server error', response.status, '- treating as need registration');
                 return false;
             }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const userData = await response.json();
-        debugLogger.log(`✅ User data received: ${JSON.stringify(userData)}`);
 
         if (userData && userData.id) {
             isAdmin = userData.is_admin || false;
-            debugLogger.log(`✅ User authenticated, isAdmin: ${isAdmin}`);
+            console.log('User authenticated, isAdmin:', isAdmin);
 
             // Show admin tab if user is admin
             if (isAdmin) {
@@ -560,20 +291,20 @@ async function checkUserAuth() {
 
             return true;
         } else {
-            debugLogger.log('❌ User data is empty or invalid');
+            console.log('User data is empty or invalid');
             return false;
         }
     } catch (error) {
-        debugLogger.error(`❌ Auth check failed: ${error.message}`);
+        console.error('Auth check failed:', error.message);
 
         // Специальная обработка для разных типов ошибок
         if (error.message.includes('timeout')) {
-            debugLogger.error('⏰ Request timeout - treating as need registration');
+            console.error('Request timeout - treating as need registration');
             return false;
         }
 
         if (error.message.includes('Failed to fetch') || error.name === 'NetworkError') {
-            debugLogger.error('🌐 Network error - treating as need registration');
+            console.error('Network error - treating as need registration');
             return false;
         }
 
@@ -584,7 +315,7 @@ async function checkUserAuth() {
 
 // Registration functions
 function showRegistrationScreen() {
-    debugLogger.log('📝 === ПОКАЗЫВАЕМ ЭКРАН РЕГИСТРАЦИИ ===');
+    console.log('Showing registration screen');
 
     // Убеждаемся что все экраны скрыты
     document.getElementById('loading').style.display = 'none';
@@ -607,11 +338,11 @@ function showRegistrationScreen() {
 
     setupRegistrationEventListeners();
 
-    debugLogger.log('✅ Экран регистрации отображен');
+    console.log('Registration screen displayed');
 }
 
 function showRegistrationSuccessScreen() {
-    debugLogger.log('🎉 === ПОКАЗЫВАЕМ ЭКРАН УСПЕШНОЙ РЕГИСТРАЦИИ ===');
+    console.log('Showing registration success screen');
 
     // Скрываем экран регистрации и показываем экран загрузки
     document.getElementById('registration-screen').style.display = 'none';
@@ -627,11 +358,11 @@ function showRegistrationSuccessScreen() {
     // Первый шаг уже завершен (создание профиля)
     document.getElementById('step-auth').classList.add('completed');
 
-    debugLogger.log('✅ Экран успешной регистрации отображен');
+    console.log('Registration success screen displayed');
 }
 
 async function processRegistrationSteps() {
-    debugLogger.log('⚙️ === НАЧИНАЕМ ОБРАБОТКУ ШАГОВ ПОСЛЕ РЕГИСТРАЦИИ ===');
+    console.log('Processing registration steps...');
 
     try {
         // Шаг 2: Загрузка расписания
@@ -645,9 +376,8 @@ async function processRegistrationSteps() {
             scheduleStep.classList.remove('active');
             scheduleStep.classList.add('completed');
             scheduleStep.querySelector('.step-icon').textContent = '✓';
-            debugLogger.log('✅ Расписание загружено');
         } catch (error) {
-            debugLogger.error(`❌ Ошибка загрузки расписания: ${error.message}`);
+            console.error('Failed to load schedule:', error.message);
             // Продолжаем даже при ошибке
             scheduleStep.classList.remove('active');
             scheduleStep.classList.add('completed');
@@ -664,9 +394,8 @@ async function processRegistrationSteps() {
 
         try {
             await loadUserBookings();
-            debugLogger.log('✅ Записи пользователя загружены');
         } catch (error) {
-            debugLogger.error(`❌ Ошибка загрузки записей: ${error.message}`);
+            console.error('Failed to load user bookings:', error.message);
             // Продолжаем даже при ошибке
         }
 
@@ -677,17 +406,17 @@ async function processRegistrationSteps() {
         await new Promise(resolve => setTimeout(resolve, 800));
 
         // Финальный переход к основному экрану
-        debugLogger.log('🏠 Переходим к основному экрану');
+        console.log('Transitioning to main screen');
 
         // Скрываем экран загрузки и показываем основной контент
         document.getElementById('registration-success-screen').style.display = 'none';
         showMainContent();
         setupEventListeners();
 
-        debugLogger.log('✅ === ВСЕ ШАГИ ЗАВЕРШЕНЫ УСПЕШНО ===');
+        console.log('All registration steps completed successfully');
 
     } catch (error) {
-        debugLogger.error(`❌ Критическая ошибка в шагах регистрации: ${error.message}`);
+        console.error('Critical error in registration steps:', error.message);
 
         // Показываем ошибку но все равно переходим к основному экрану
         setTimeout(() => {
@@ -703,7 +432,7 @@ async function processRegistrationSteps() {
 }
 
 function showMainContent() {
-    debugLogger.log('🏠 === ПОКАЗЫВАЕМ ОСНОВНОЙ КОНТЕНТ ===');
+    console.log('Showing main content');
 
     // Убеждаемся что все экраны скрыты
     document.getElementById('loading').style.display = 'none';
@@ -717,7 +446,7 @@ function showMainContent() {
         userNameElement.textContent = `${currentUser.firstName} ${currentUser.lastName || ''}`;
     }
 
-    debugLogger.log('✅ Основной контент отображен');
+    console.log('Main content displayed');
 }
 
 function setupRegistrationEventListeners() {
@@ -970,7 +699,7 @@ function cleanPhoneNumber(phone) {
 async function handleRegistrationSubmit(event) {
     event.preventDefault();
 
-    debugLogger.log('📝 === НАЧАЛО РЕГИСТРАЦИИ ===');
+    console.log('Starting registration...');
 
     const submitButton = document.getElementById('submit-registration');
     submitButton.classList.add('btn-loading');
@@ -985,7 +714,7 @@ async function handleRegistrationSubmit(event) {
             age: registrationData.age
         };
 
-        debugLogger.log(`📤 Registration data: ${JSON.stringify(registerData)}`);
+        console.log('Registration data:', registerData);
 
         // Добавляем уникальный параметр для избежания кеширования
         const timestamp = new Date().getTime();
@@ -994,11 +723,11 @@ async function handleRegistrationSubmit(event) {
             body: JSON.stringify(registerData)
         });
 
-        debugLogger.log(`📡 Registration response status: ${response.status}`);
+        console.log('Registration response status:', response.status);
 
         if (response.ok) {
             const responseData = await response.json();
-            debugLogger.success(`✅ Регистрация успешна! Response: ${JSON.stringify(responseData)}`);
+            console.log('Registration successful! Response:', responseData);
 
             // Показываем сообщение об успехе на 1.5 секунды
             showSuccess('Регистрация прошла успешно! Добро пожаловать!');
@@ -1016,7 +745,7 @@ async function handleRegistrationSubmit(event) {
 
         } else {
             const errorData = await response.json().catch(() => ({ detail: 'Неизвестная ошибка сервера' }));
-            debugLogger.error(`❌ Registration failed: ${JSON.stringify(errorData)}`);
+            console.error('Registration failed:', errorData);
 
             let errorMessage = 'Ошибка регистрации. Попробуйте снова.';
 
@@ -1030,8 +759,8 @@ async function handleRegistrationSubmit(event) {
         }
 
     } catch (error) {
-        debugLogger.error(`❌ Registration error: ${error.message}`);
-        debugLogger.error(`Stack: ${error.stack}`);
+        console.error('Registration error:', error.message);
+        console.error('Stack:', error.stack);
 
         let errorMessage = 'Ошибка соединения. Проверьте интернет и попробуйте снова.';
 
@@ -1056,47 +785,20 @@ async function handleRegistrationSubmit(event) {
 
 async function loadAvailableDays() {
     try {
-        debugLog('=== ЗАГРУЗКА ДОСТУПНЫХ ДНЕЙ ===');
-        debugLog(`API URL: ${API_BASE_URL}/slots/available-days`);
-        debugLog(`Current user: ${JSON.stringify(currentUser)}`);
-        debugLog(`Telegram WebApp data: ${JSON.stringify(tg.initDataUnsafe)}`);
-        debugLog(`Telegram WebApp version: ${tg.version}`);
-        debugLog(`Telegram WebApp platform: ${tg.platform}`);
-        debugLog(`Is Telegram WebApp: ${tg.isVersionAtLeast('6.0')}`);
+        console.log('Loading available days...');
 
-        // Проверяем доступность API
-        debugLog('Проверяем доступность API...');
-
-        // Получаем доступные дни через новый endpoint
         const response = await apiRequest(`${API_BASE_URL}/slots/available-days`);
-
-        debugLog(`Response status: ${response.status}`);
-        debugLog(`Response statusText: ${response.statusText}`);
-        debugLog(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
-        debugLog(`Response ok: ${response.ok}`);
-        debugLog(`Response type: ${response.type}`);
-        debugLog(`Response url: ${response.url}`);
 
         if (!response.ok) {
             const errorText = await response.text();
-            debugLog(`Response error text: ${errorText}`);
             throw new Error(`HTTP ${response.status} ${response.statusText}: ${errorText}`);
         }
 
         const data = await response.json();
-        debugLog(`Response data: ${JSON.stringify(data)}`);
-
-        // Используем полученные даты
         availableDays = data.available_days || [];
-        debugLog(`Available days: ${JSON.stringify(availableDays)}`);
-
         renderDays();
-        debugLog('Days rendered successfully');
     } catch (error) {
-        debugLog('=== ОШИБКА ЗАГРУЗКИ ДНЕЙ ===');
-        debugLog(`Error type: ${error.constructor.name}`);
-        debugLog(`Error message: ${error.message}`);
-        debugLog(`Error stack: ${error.stack}`);
+        console.error('Failed to load available days:', error.message);
 
         // Дополнительная диагностика для разных типов ошибок
         if (error instanceof TypeError) {
@@ -1200,23 +902,23 @@ function selectDay(day) {
 
 async function loadAvailableTimes(day) {
     try {
-        debugLog(`Loading available times for day: ${day}`);
+        console.log(`Loading available times for day: ${day}`);
 
         const response = await apiRequest(`${API_BASE_URL}/slots/?selected_date=${day}&telegram_id=${currentUser.id}`);
         const data = await response.json();
 
-        debugLog(`Raw slots data: ${JSON.stringify(data)}`);
+        console.log(`Raw slots data: ${JSON.stringify(data)}`);
 
         // Backend уже возвращает только подходящие для тренировки слоты
         availableTimes = data.available_periods || [];
-        debugLog(`Training slots from backend: ${availableTimes.length}`);
+        console.log(`Training slots from backend: ${availableTimes.length}`);
 
         renderTimes();
 
         // Show times section
         document.getElementById('times-section').style.display = 'block';
     } catch (error) {
-        debugLog(`Failed to load times: ${error.message}`);
+        console.log(`Failed to load times: ${error.message}`);
         showError('Ошибка загрузки доступного времени');
     }
 }
@@ -1273,12 +975,12 @@ async function confirmBooking() {
         // Проверяем, находимся ли мы в режиме переноса
         const isReschedule = window.rescheduleBookingId;
         
-        debugLog(isReschedule ? '=== ПЕРЕНОС БРОНИ ===' : '=== СОЗДАНИЕ БРОНИ ===');
-        debugLog(`Selected time: ${JSON.stringify(selectedTime)}`);
-        debugLog(`Selected day: ${selectedDay}`);
-        debugLog(`Current user: ${JSON.stringify(currentUser)}`);
+        console.log(isReschedule ? '=== ПЕРЕНОС БРОНИ ===' : '=== СОЗДАНИЕ БРОНИ ===');
+        console.log(`Selected time: ${JSON.stringify(selectedTime)}`);
+        console.log(`Selected day: ${selectedDay}`);
+        console.log(`Current user: ${JSON.stringify(currentUser)}`);
         if (isReschedule) {
-            debugLog(`Reschedule booking ID: ${window.rescheduleBookingId}`);
+            console.log(`Reschedule booking ID: ${window.rescheduleBookingId}`);
         }
 
         // Рассчитываем правильное время окончания
@@ -1287,11 +989,11 @@ async function confirmBooking() {
         endTime.setMinutes(endTime.getMinutes() + 90);
 
         const calculatedEndTime = endTime.toTimeString().slice(0, 8);
-        debugLog(`Calculated end time: ${calculatedEndTime}`);
+        console.log(`Calculated end time: ${calculatedEndTime}`);
 
         if (isReschedule) {
             // Логика переноса: сначала удаляем старое, потом создаем новое
-            debugLog('Удаляем старое бронирование...');
+            console.log('Удаляем старое бронирование...');
             const deleteResponse = await apiRequest(`${API_BASE_URL}/bookings/${window.rescheduleBookingId}?telegram_id=${currentUser.id}`, {
                 method: 'DELETE'
             });
@@ -1301,7 +1003,7 @@ async function confirmBooking() {
                 return;
             }
             
-            debugLog('Старое бронирование удалено, обновляем доступные слоты...');
+            console.log('Старое бронирование удалено, обновляем доступные слоты...');
             
             // Обновляем доступные дни и времена после удаления
             await loadAvailableDays();
@@ -1309,7 +1011,7 @@ async function confirmBooking() {
                 await loadAvailableTimes(selectedDay);
             }
             
-            debugLog('Создаем новое бронирование...');
+            console.log('Создаем новое бронирование...');
         }
 
         const bookingData = {
@@ -1323,17 +1025,17 @@ async function confirmBooking() {
             }
         };
 
-        debugLog(`Booking data: ${JSON.stringify(bookingData)}`);
+        console.log(`Booking data: ${JSON.stringify(bookingData)}`);
 
         const response = await apiRequest(`${API_BASE_URL}/bookings/`, {
             method: 'POST',
             body: JSON.stringify(bookingData)
         });
 
-        debugLog(`Response status: ${response.status}`);
+        console.log(`Response status: ${response.status}`);
 
         if (response.ok) {
-            debugLog(isReschedule ? 'Booking rescheduled successfully' : 'Booking created successfully');
+            console.log(isReschedule ? 'Booking rescheduled successfully' : 'Booking created successfully');
             showSuccess(isReschedule ? 'Бронирование успешно перенесено!' : 'Запись успешно создана!');
             
             // Очищаем режим переноса
@@ -1352,11 +1054,11 @@ async function confirmBooking() {
             switchTab('my-bookings');
         } else {
             const error = await response.json();
-            debugLog(`Booking error: ${JSON.stringify(error)}`);
+            console.log(`Booking error: ${JSON.stringify(error)}`);
             showError(error.detail || (isReschedule ? 'Ошибка переноса записи' : 'Ошибка создания записи'));
         }
     } catch (error) {
-        debugLog(`Booking failed: ${error.message}`);
+        console.log(`Booking failed: ${error.message}`);
         showError(isReschedule ? 'Ошибка переноса записи' : 'Ошибка создания записи');
     }
 }
@@ -1614,6 +1316,9 @@ function closeSuccessModal() {
     document.getElementById('success-modal').style.display = 'none';
 }
 
-// Global functions for modal buttons
+// Global functions for modal buttons and booking actions
 window.closeErrorModal = closeErrorModal;
 window.closeSuccessModal = closeSuccessModal;
+window.cancelBooking = cancelBooking;
+window.rescheduleBooking = rescheduleBooking;
+window.cancelReschedule = cancelReschedule;

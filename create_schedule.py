@@ -1,10 +1,15 @@
-from backend.repository.db import engine
+import asyncio
+import sys
+import os
+
+# Добавляем путь к backend в sys.path
+backend_path = os.path.join(os.path.dirname(__file__), 'backend')
+sys.path.insert(0, backend_path)
+
+from src.repository.db import engine
+from src.models.db import TimeSlot
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
-
-import asyncio
-from src.models.db import TimeSlot
 
 from datetime import datetime, timedelta, time
 from sqlmodel import select
@@ -39,10 +44,15 @@ async def fill_schedule(start_date: datetime, duration: int = 30):
                 existing_slot = await session.execute(statement)
 
                 if existing_slot.first() is None:
+                    # Определяем день недели на русском языке
+                    weekdays = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
+                    weekday_name = weekdays[current_date.weekday()]
+                    
                     slots.append(TimeSlot(
                         date=current_date,
                         start_time=slot_start,
                         end_time=slot_end,
+                        weekday=weekday_name,
                     ))
 
         # Переход на следующий день

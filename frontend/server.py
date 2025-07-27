@@ -8,7 +8,14 @@ import socketserver
 import os
 import sys
 import mimetypes
+import json
 from urllib.parse import urlparse
+
+try:
+    import requests
+except ImportError:
+    print("❌ Модуль 'requests' не найден. Установите его командой: pip install requests")
+    sys.exit(1)
 
 class CORSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -37,6 +44,10 @@ class CORSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         parsed_path = urlparse(self.path)
         clean_path = parsed_path.path
 
+        # Обработка API endpoint для получения конфигурации backend
+        if clean_path == '/api/config':
+            return self.handle_config_request()
+
         # Если запрашивается корневой путь, отдаем index.html
         if clean_path == '/' or clean_path == '':
             clean_path = '/index.html'
@@ -49,6 +60,77 @@ class CORSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             self.log_message("File not found: %s", file_path)
             self.send_error(404, "File not found")
+
+    def handle_config_request(self):
+        """Обрабатывает запрос конфигурации backend URL"""
+        try:
+            self.log_message("Config request: fetching ngrok tunnels...")
+            
+            # Запрашиваем ngrok API локально
+            response = requests.get('http://localhost:4040/api/tunnels', timeout=5)
+            response.raise_for_status()
+            
+            data = response.json()
+            tunnels = data.get('tunnels', [])
+            
+            # Ищем туннель для backend (localhost:8000)
+            backend_tunnel = None
+            for tunnel in tunnels:
+                if tunnel.get('config', {}).get('addr') == 'http://localhost:8000':
+                    backend_tunnel = tunnel
+                    break
+            
+            if backend_tunnel:
+                backend_url = f"{backend_tunnel['public_url']}/api"
+                config_data = {
+                    "backend_url": backend_url,
+                    "status": "success"
+                }
+                self.log_message("Config success: backend URL = %s", backend_url)
+            else:
+                config_data = {
+                    "error": "Backend tunnel not found. Make sure ngrok is proxying localhost:8000",
+                    "status": "error"
+                }
+                self.log_message("Config error: backend tunnel not found")
+            
+            # Отправляем JSON ответ
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            json_response = json.dumps(config_data, ensure_ascii=False)
+            self.wfile.write(json_response.encode('utf-8'))
+            
+        except requests.exceptions.RequestException as e:
+            # Ошибка запроса к ngrok
+            self.log_message("Config error: ngrok API unavailable - %s", str(e))
+            error_data = {
+                "error": f"Ngrok API недоступен: {str(e)}",
+                "status": "error"
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            json_response = json.dumps(error_data, ensure_ascii=False)
+            self.wfile.write(json_response.encode('utf-8'))
+            
+        except Exception as e:
+            # Общая ошибка
+            self.log_message("Config error: unexpected error - %s", str(e))
+            error_data = {
+                "error": f"Неожиданная ошибка: {str(e)}",
+                "status": "error"
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            json_response = json.dumps(error_data, ensure_ascii=False)
+            self.wfile.write(json_response.encode('utf-8'))
 
     def do_OPTIONS(self):
         # Обработка preflight запросов

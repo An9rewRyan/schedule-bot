@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, time
 # Убираем зависимость от w3lib, используем urllib.parse
 from urllib.parse import urlencode, parse_qs, urlparse, urlunparse
 
-API_BASE_URL = "https://7db1d64ccc1e.ngrok-free.app/api"
+API_BASE_URL = "https://7917e2946164.ngrok-free.app/api"
 
 
 async def delete_booking(booking_id: int, telegram_id: int):
