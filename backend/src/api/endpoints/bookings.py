@@ -20,24 +20,6 @@ bookings_router = APIRouter()
 
 logger.info("Bookings router initialized")
 
-@bookings_router.options("/")
-async def options_bookings(response: Response):
-    """Handle CORS preflight requests for bookings endpoint"""
-    logger.info("OPTIONS request to /api/bookings")
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return {"message": "OK"}
-
-@bookings_router.options("/user/{telegram_id}")
-async def options_user_bookings(response: Response, telegram_id: int):
-    """Handle CORS preflight requests for user bookings endpoint"""
-    logger.info(f"OPTIONS request to /api/bookings/user/{telegram_id}")
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return {"message": "OK"}
-
 @bookings_router.get("/user/{telegram_id}", response_model=List[UserBookingInfo])
 async def get_user_bookings(
         telegram_id: int,
@@ -57,16 +39,6 @@ async def get_bookings(
     logger.info(f"GET request to /api/bookings with telegram_id={telegram_id}, booking_date={booking_date}")
     bookings = await booking_repo.get_bookings(telegram_id=telegram_id, booking_date=booking_date)
     return [UserBookingInfo.from_orm(booking) for booking in bookings]
-
-
-@bookings_router.options("/{booking_id}")
-async def options_booking_by_id(response: Response, booking_id: int):
-    """Handle CORS preflight requests for specific booking endpoint"""
-    logger.info(f"OPTIONS request to /api/bookings/{booking_id}")
-    response.headers["Access-Control-Allow-Methods"] = "DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return {"message": "OK"}
 
 @bookings_router.delete("/{booking_id}")
 async def delete_booking_by_id(

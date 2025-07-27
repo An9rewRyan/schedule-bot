@@ -15,22 +15,6 @@ timeslots_router = APIRouter()
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
-@timeslots_router.options("/available-days")
-async def options_available_days(response: Response):
-    """Handle CORS preflight requests for available-days endpoint"""
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return {"message": "OK"}
-
-@timeslots_router.options("/")
-async def options_timeslots(response: Response, selected_date: Optional[date] = None, telegram_id: Optional[int] = None):
-    """Handle CORS preflight requests for timeslots endpoint"""
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return {"message": "OK"}
-
 @timeslots_router.get("/available-days")
 async def get_available_days(
     timeslot_repo: TimeslotCRUDRepository = Depends(get_repository(repo_type=TimeslotCRUDRepository))
