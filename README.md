@@ -1,7 +1,7 @@
 # Schedule Bot - Universal Training Booking System
 
 A Telegram Mini App for gyms, fitness centers, and sports clubs to manage training session bookings. Includes a web interface, FastAPI backend, and Telegram bot integration.
-
+https://deepwiki.com/An9rewRyan/schedule-bot.git
 ## Quick Start
 
 ```bash
